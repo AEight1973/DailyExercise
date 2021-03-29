@@ -14,7 +14,7 @@ def read():
         data = f.read().split('\n')
     f2 = pd.DataFrame(columns=['Year', 'No_Smoothing', 'Lowess(5)'])
     index = 0
-    for line in data[6:]:
+    for line in data[5:]:
         f2.loc[index] = line.split()
         index += 1
 

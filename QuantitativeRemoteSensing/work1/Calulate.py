@@ -8,10 +8,6 @@ leaf, avhrr, modis = ReadFile.read()
 
 leaf_wave= dict()
 for i in range(len(leaf)):
-    # if wave1[0] <= leaf.iloc[i, 0] <= wave1[1]:
-    #     leaf_wave1[leaf.iloc[i, 0]] = leaf.iloc[i, 1]
-    # elif wave2[0] <= leaf.iloc[i, 0] <= wave2[1]:
-    #     leaf_wave2[leaf.iloc[i, 0]] = leaf.iloc[i, 1]
     leaf_wave[leaf.iloc[i, 0]] = leaf.iloc[i, 1]
 
 modis_wave1, modis_wave2, avhrr_wave1, avhrr_wave2 = 0, 0, 0, 0

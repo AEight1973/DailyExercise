@@ -10,8 +10,9 @@ def read():
     _lon = (nc_obj.variables['lon'][:])
     _time = (nc_obj.variables['time'][:])
     _air = (nc_obj.variables['air'][:])
+    _co2 = list(pd.read_excel('data/greenhouse_gas.xlsx').iloc[184:256, 1])
 
-    return _lat, _lon, _time, _air
+    return _lat, _lon, _time, _air, _co2
 
 
 if __name__ == '__name__':

@@ -18,8 +18,8 @@ def load_data(index):
 
 
 def df2datasets(df):
-    x = np.array(df['pressure', 'height', 'dewpoint', 'direction', 'speed'])
-    y = np.array(df['temperature'])
+    x = df['pressure', 'height', 'dewpoint', 'direction', 'speed'].values
+    y = df['temperature'].values
 
     return x, y
 

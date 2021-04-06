@@ -41,7 +41,7 @@ model.summary()  # 打印模型
 plot(model, to_file='lstm_model.png')  # 绘制模型结构图，并保存成图片
 
 model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])  # 编译模型
-history = model.fit(X_train, Y_train, nb_epoch=nb_epoch, batch_size=batch_size, shuffle=True, verbose=1)  # 迭代训练
+history = model.fit(X_train, Y_train, epochs=nb_epoch, batch_size=batch_size, shuffle=True, verbose=1)  # 迭代训练
 
 score = model.evaluate(X_test, Y_test, verbose=1)  # 模型评估
 print('Test score:', score[0])

@@ -1,0 +1,3 @@
+pressure,height,temperature,dewpoint,direction,speed,u_wind,v_wind,station,station_number,time,latitude,longitude,elevation,pw
+105.0,4,-135.0,-135.0,263.0,263.0,261.0396378816677,32.051637315553705,,58362,2016-06-05,31.4,121.46,4.0,0.0
+104.0,43,-135.0,-135.0,263.8,263.8,262.2570242958968,28.490230035248743,,58362,2016-06-05,31.4,121.46,4.0,0.0

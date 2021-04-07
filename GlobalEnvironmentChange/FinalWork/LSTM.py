@@ -1,4 +1,3 @@
-import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 from sklearn.metrics import mean_squared_error
@@ -12,9 +11,9 @@ from LoadData import series_to_supervised, csv2datasets
 # keras实现LSTM网络
 # Hyper parameters
 
-batch_size = 128
-nb_epoch = 10
-nb_time_steps = 12
+batch_size = 72
+nb_epoch = 50
+nb_time_steps = 1
 dim_input_vector = 1
 nb_classes = 10
 
@@ -30,14 +29,14 @@ values = values.astype('float32')
 scaler = MinMaxScaler(feature_range=(0, 1))
 scaled = scaler.fit_transform(values)
 # frame as supervised learning
-reframed = series_to_supervised(scaled, 1, 1)
+reframed = series_to_supervised(scaled)
 # drop columns we don't want to predict
-# reframed.drop(reframed.columns[[9, 10, 11, 12, 13, 14, 15]], axis=1, inplace=True)
-# # print(reframed.head())
+reframed.drop(reframed.columns[[-7, -5, -4, -3, -2, -1]], axis=1, inplace=True)
+print(reframed.head())
 
 # split into train and test sets
 values = reframed.values
-n_train_hours = 365 * 24
+n_train_hours = 3000
 train = values[:n_train_hours, :]
 test = values[n_train_hours:, :]
 # split into input and outputs
@@ -53,11 +52,10 @@ model.add(LSTM(50, input_shape=(train_X.shape[1], train_X.shape[2])))
 model.add(Dense(1))
 model.compile(loss='mae', optimizer='adam')
 # fit network
-history = model.fit(train_X, train_y, epochs=50, batch_size=72, validation_data=(test_X, test_y), verbose=2,
-                    shuffle=False)
+history = model.fit(train_X, train_y, epochs=nb_epoch, batch_size=batch_size, validation_data=(test_X, test_y), verbose=2, shuffle=False)
 # plot history
 plt.plot(history.history['loss'], label='train')
-plt.plot(history.history['val_loss'], label='test')
+# plt.plot(history.history['val_loss'], label='test')
 plt.legend()
 plt.show()
 # make a prediction

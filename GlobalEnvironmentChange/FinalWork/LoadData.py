@@ -50,5 +50,12 @@ def csv2datasets(height=4):
     return output
 
 
+def pca(data, percent=0.95):
+    from sklearn.decomposition import PCA
+    _pca = PCA(n_components=percent)
+    new_data = _pca.fit_transform(data)
+    return new_data
+
+
 if __name__ == '__main__':
     print(csv2datasets())

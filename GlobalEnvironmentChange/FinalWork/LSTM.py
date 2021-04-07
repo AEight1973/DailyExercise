@@ -7,6 +7,7 @@ from keras.datasets import imdb
 # Hyper parameters
 from keras.utils import np_utils
 from tensorflow.python.keras import Sequential
+from tensorflow.python.keras.layers import LSTM, Dense
 
 batch_size = 128
 nb_epoch = 10
@@ -34,15 +35,27 @@ Y_test = np_utils.to_categorical(y_test, nb_classes)
 
 # Build LSTM network
 model = Sequential()
-model.add(LSTM(nb_lstm_outputs, input_shape=input_shape))
-model.add(Dense(nb_classes, activation='softmax', init=init_weights))  # 初始权重
+model.add(LSTM(50, input_shape=(train_X.shape[1], train_X.shape[2])))
+model.add(Dense(1))
+model.compile(loss='mae', optimizer='adam')
+# fit network
+history = model.fit(train_X, train_y, epochs=50, batch_size=72, validation_data=(test_X, test_y), verbose=2, shuffle=False)
+# plot history
+pyplot.plot(history.history['loss'], label='train')
+pyplot.plot(history.history['val_loss'], label='test')
+pyplot.legend()
+pyplot.show()
+# make a prediction
+yhat = model.predict(test_X)
+test_X = test_X.reshape((test_X.shape[0], test_X.shape[2]))
+# invert scaling for forecast
+inv_yhat = concatenate((yhat, test_X[:, 1:]), axis=1)
+inv_yhat = scaler.inverse_transform(inv_yhat)
+inv_yhat = inv_yhat[:,0]
+# invert scaling for actual
+inv_y = scaler.inverse_transform(test_X)
+inv_y = inv_y[:,0]
+# calculate RMSE
+rmse = sqrt(mean_squared_error(inv_y, inv_yhat))
+print('Test RMSE: %.3f' % rmse)
 
-model.summary()  # 打印模型
-plot(model, to_file='lstm_model.png')  # 绘制模型结构图，并保存成图片
-
-model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])  # 编译模型
-history = model.fit(X_train, Y_train, epochs=nb_epoch, batch_size=batch_size, shuffle=True, verbose=1)  # 迭代训练
-
-score = model.evaluate(X_test, Y_test, verbose=1)  # 模型评估
-print('Test score:', score[0])
-print('Test accuracy:', score[1])

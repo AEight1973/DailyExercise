@@ -19,7 +19,7 @@ dim_input_vector = 1
 nb_classes = 10
 
 # load dataset
-dataset = pd.read_csv('pollution.csv', header=0, index_col=0)
+dataset = csv2datasets()
 values = dataset.values
 # integer encode direction
 encoder = LabelEncoder()
@@ -32,8 +32,8 @@ scaled = scaler.fit_transform(values)
 # frame as supervised learning
 reframed = series_to_supervised(scaled, 1, 1)
 # drop columns we don't want to predict
-reframed.drop(reframed.columns[[9, 10, 11, 12, 13, 14, 15]], axis=1, inplace=True)
-print(reframed.head())
+# reframed.drop(reframed.columns[[9, 10, 11, 12, 13, 14, 15]], axis=1, inplace=True)
+# # print(reframed.head())
 
 # split into train and test sets
 values = reframed.values

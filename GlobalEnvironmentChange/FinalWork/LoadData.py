@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import os
 from datetime import datetime
@@ -33,7 +34,8 @@ def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
 
 def csv2datasets(height=4):
     file_list = os.listdir('data/')
-    features = ['pressure', 'temperature', 'dewpoint', 'direction', 'speed', 'u_wind', 'v_wind']
+    # features = ['pressure', 'temperature', 'dewpoint', 'direction', 'speed', 'u_wind', 'v_wind']
+    features = ['temperature']
     output = pd.DataFrame(columns=features)
     var = [None] * len(features)
 
@@ -42,7 +44,7 @@ def csv2datasets(height=4):
         select = data[data['height'] == height]
         time = filename.split('.')[0].split('_')[1]
         time = datetime(int(time[0:4]), int(time[4:6]), int(time[6:8]), int(time[8:10]))
-        if len(select) == 0:
+        if len(select) == 0 or True in np.isnan(select[features].values[0]):
             output.loc[time] = var
         else:
             var = select[features].values[0]
@@ -58,4 +60,5 @@ def pca(data, percent=0.95):
 
 
 if __name__ == '__main__':
-    print(csv2datasets())
+    a = csv2datasets()
+    print(a)

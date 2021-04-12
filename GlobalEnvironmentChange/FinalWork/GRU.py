@@ -3,7 +3,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 from sklearn.metrics import mean_squared_error
 from keras.models import Sequential
-from keras.layers import LSTM, Dropout, Dense
+from keras.layers import GRU, Dropout, Dense
 from numpy import concatenate, c_
 from math import sqrt
 from LoadData import *
@@ -24,17 +24,17 @@ session = tf.compat.v1.Session(config=config)
 
 # 设置全局变量
 batch_size = 72
-epochs = 10
-time_steps = 363
+epochs = 50
+time_steps = 1
 
 # load dataset
 dataset = csv2datasets()
 values = dataset.values
 # integer encode direction
-encoder = LabelEncoder()
-values[:, 4] = encoder.fit_transform(values[:, 4])
+# encoder = LabelEncoder()
+# values[:, 4] = encoder.fit_transform(values[:, 4])
 # 主成分分析 PCA
-values = c_[pca(values[:, [0, 2, 3, 4, 5, 6]]), values[:, 1]]
+# values = c_[pca(values[:, [0, 2, 3, 4, 5, 6]]), values[:, 1]]
 nb_classes = values.shape[1]
 # ensure all data is float
 values = values.astype('float32')
@@ -68,15 +68,15 @@ print('train_X.shape:', train_X.shape, 'train_y.shape:', train_y.shape, '\n')
 print('test_X.shape:', test_X.shape, 'test_y.shape:', test_y.shape, '\n')
 
 model = Sequential()
-model.add(LSTM(80, return_sequences=True))
+model.add(GRU(80, return_sequences=True))
 model.add(Dropout(0.2))
-model.add(LSTM(100))
+model.add(GRU(100))
 model.add(Dropout(0.2))
 model.add(Dense(1))
 model.compile(loss='mae', optimizer='adam')
 # fit network
 history = model.fit(train_X, train_y, epochs=epochs, batch_size=batch_size, validation_data=(test_X, test_y),
-                    verbose=2, shuffle=False)
+                    verbose=1, shuffle=False)
 # plot history
 plt.plot(history.history['loss'], label='train')
 plt.plot(history.history['val_loss'], label='test')

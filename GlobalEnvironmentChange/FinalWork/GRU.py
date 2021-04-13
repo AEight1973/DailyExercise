@@ -8,6 +8,7 @@ from numpy import concatenate, c_
 from math import sqrt
 from LoadData import *
 import tensorflow as tf
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 # 配置TensorFlow
 tf.compat.v1.disable_eager_execution()
@@ -20,20 +21,13 @@ config.gpu_options.allow_growth = True
 session = tf.compat.v1.Session(config=config)
 
 # 设置全局变量
-batch_size = 72
-epochs = 40
-time_steps = 1
+batch_size = 64
+epochs = 50
+time_steps = 14
 
 # load dataset
 dataset = csv2datasets()
 values = dataset.values
-# 平滑处理
-values = smooth(values, 29)
-# integer encode direction
-# encoder = LabelEncoder()
-# values[:, 4] = encoder.fit_transform(values[:, 4])
-# 主成分分析 PCA
-# values = c_[pca(values[:, [0, 2, 3, 4, 5, 6]]), values[:, 1]]
 nb_classes = values.shape[1]
 # ensure all data is float
 values = values.astype('float32')
@@ -70,37 +64,40 @@ model.add(GRU(100))
 model.add(Dropout(0.2))
 model.add(Dense(1))
 model.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='mean_squared_error')
+
 # fit network
 history = model.fit(train_X, train_y, epochs=epochs, batch_size=batch_size, validation_data=(test_X, test_y),
                     verbose=1, shuffle=False)
+
 # plot history
 plt.plot(history.history['loss'], label='train')
 plt.plot(history.history['val_loss'], label='test')
 plt.legend()
 plt.show()
 
-# # make a prediction
-# yhat = model.predict(test_X)
-# test_x = test_X.reshape((test_X.shape[0], test_X.shape[2]))
-# # invert scaling for forecast
-# inv_yhat = concatenate((yhat, test_x[:, 1:]), axis=1)
-# inv_yhat = scaler.inverse_transform(inv_yhat)
-# inv_yhat = inv_yhat[:, 0]
-# # invert scaling for actual
-# inv_y = scaler.inverse_transform(test_x)
-# inv_y = inv_y[:, 0]
-# # calculate RMSE
-# rmse = sqrt(mean_squared_error(inv_y, inv_yhat))
-# print('Test RMSE: %.3f' % rmse)
+# predict
+# 测试集输入模型进行预测
+predicted_stock_price = model.predict(test_X)
+# 对预测数据还原---从（0，1）反归一化到原始范围
+predicted_stock_price = scaler.inverse_transform(predicted_stock_price)
+# 对真实数据还原---从（0，1）反归一化到原始范围
+real_stock_price = scaler.inverse_transform(scaled)
+# 画出真实数据和预测数据的对比曲线
+plt.plot(real_stock_price, color='red', label='MaoTai Stock Price')
+plt.plot(predicted_stock_price, color='blue', label='Predicted MaoTai Stock Price')
+plt.title('40M Temperature Prediction')
+plt.xlabel('Time')
+plt.ylabel('Temperature')
+plt.legend()
+plt.show()
 
-# plot prediction
-plt.figure(figsize=(24, 8))
-train_predict = model.predict(train_X)
-# valid_predict = model.predict(valid_X)
-test_predict = model.predict(test_X)
-plt.plot(values[:, -1], c='b')
-plt.show()
-plt.plot([x for x in train_predict], c='g')
-plt.plot([None for _ in train_predict] + [x for x in test_predict], c='y')
-# plt.plot([None for _ in train_predict] + [None for _ in valid_predict] + [x for x in test_predict], c='r')
-plt.show()
+# evaluate
+# calculate MSE 均方误差 ---> E[(预测值-真实值)^2] (预测值减真实值求平方后求均值)
+mse = mean_squared_error(predicted_stock_price, real_stock_price)
+# calculate RMSE 均方根误差--->sqrt[MSE]    (对均方误差开方)
+rmse = sqrt(mean_squared_error(predicted_stock_price, real_stock_price))
+# calculate MAE 平均绝对误差----->E[|预测值-真实值|](预测值减真实值求绝对值后求均值）
+mae = mean_absolute_error(predicted_stock_price, real_stock_price)
+print('均方误差: %.6f' % mse)
+print('均方根误差: %.6f' % rmse)
+print('平均绝对误差: %.6f' % mae)

@@ -9,9 +9,6 @@ from math import sqrt
 from LoadData import *
 import tensorflow as tf
 
-# keras实现LSTM网络
-# Hyper parameters
-
 # 配置TensorFlow
 tf.compat.v1.disable_eager_execution()
 
@@ -29,7 +26,9 @@ time_steps = 1
 
 # load dataset
 dataset = csv2datasets()
-values = smooth(dataset.values, 29)
+values = dataset.values
+# 平滑处理
+values = smooth(values, 29)
 # integer encode direction
 # encoder = LabelEncoder()
 # values[:, 4] = encoder.fit_transform(values[:, 4])
@@ -50,30 +49,27 @@ print(reframed.head())
 
 # split into train and test sets
 values = reframed.values
-# n_train_hours = 3000
-# train = values[:n_train_hours, :]
-# test = values[n_train_hours:, :]
-# split into input and outputs
-# train_X, train_y = train[:, :-1], train[:, -1]
-# test_X, test_y = test[:, :-1], test[:, -1]
 train_X, test_X, train_y, test_y = train_test_split(values[:, :-1], values[:, -1], test_size=0.2)
-# train_X, valid_X, train_y, valid_y = train_test_split(train_X, train_y, test_size=0.2)
 # reshape input to be 3D [samples, timesteps, features]
-print(train_X.shape)
 train_X = train_X.reshape((train_X.shape[0], time_steps, nb_classes))
-# valid_X = valid_X.reshape((valid_X.shape[0], time_steps, valid_X.shape[1]))
 test_X = test_X.reshape((test_X.shape[0], time_steps, nb_classes))
 print('train_X.shape:', train_X.shape, 'train_y.shape:', train_y.shape, '\n')
-# print('valid_X.shape:', valid_X.shape, 'valid_y.shape:', valid_y.shape, '\n')
 print('test_X.shape:', test_X.shape, 'test_y.shape:', test_y.shape, '\n')
 
+# 打乱训练集
+np.random.seed(7)
+np.random.shuffle(train_X)
+np.random.seed(7)
+np.random.shuffle(train_y)
+
+# 建立模型
 model = Sequential()
 model.add(GRU(80, return_sequences=True))
 model.add(Dropout(0.2))
 model.add(GRU(100))
 model.add(Dropout(0.2))
 model.add(Dense(1))
-model.compile(loss='mae', optimizer='adam')
+model.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='mean_squared_error')
 # fit network
 history = model.fit(train_X, train_y, epochs=epochs, batch_size=batch_size, validation_data=(test_X, test_y),
                     verbose=1, shuffle=False)

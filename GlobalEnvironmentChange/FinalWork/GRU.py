@@ -24,12 +24,12 @@ session = tf.compat.v1.Session(config=config)
 
 # 设置全局变量
 batch_size = 72
-epochs = 50
+epochs = 40
 time_steps = 1
 
 # load dataset
 dataset = csv2datasets()
-values = dataset.values
+values = smooth(dataset.values, 29)
 # integer encode direction
 # encoder = LabelEncoder()
 # values[:, 4] = encoder.fit_transform(values[:, 4])
@@ -103,6 +103,7 @@ train_predict = model.predict(train_X)
 # valid_predict = model.predict(valid_X)
 test_predict = model.predict(test_X)
 plt.plot(values[:, -1], c='b')
+plt.show()
 plt.plot([x for x in train_predict], c='g')
 plt.plot([None for _ in train_predict] + [x for x in test_predict], c='y')
 # plt.plot([None for _ in train_predict] + [None for _ in valid_predict] + [x for x in test_predict], c='r')

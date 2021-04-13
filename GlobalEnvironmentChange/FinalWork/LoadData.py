@@ -44,6 +44,8 @@ def csv2datasets(height=4):
         select = data[data['height'] == height]
         time = filename.split('.')[0].split('_')[1]
         time = datetime(int(time[0:4]), int(time[4:6]), int(time[6:8]), int(time[8:10]))
+        # if time.hour == 12:
+        #     continue
         if len(select) == 0 or True in np.isnan(select[features].values[0]):
             output.loc[time] = var
         else:
@@ -57,6 +59,13 @@ def pca(data, percent=0.95):
     _pca = PCA(n_components=percent)
     new_data = _pca.fit_transform(data)
     return new_data
+
+
+def smooth(x, window_len=100, window='hanning'):
+    window = [1/window_len] * window_len
+    print(x.T)
+    y = np.convolve(x.T[0], window, mode='valid')
+    return np.array([y]).T
 
 
 if __name__ == '__main__':

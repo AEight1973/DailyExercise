@@ -5,5 +5,140 @@ from math import sqrt
 from LoadData import *
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import torch
+from torch import nn
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+'''
+dataset
+数据集说明
+'''
+
+dataset = csv2datasets()
+training_set = dataset.iloc[0:3500, 0:1].values  # 前(2426-300=2126)天的开盘价作为训练集,表格从0开始计数，2:3 是提取[2:3)列，前闭后开,故提取出C列开盘价
+test_set = dataset.iloc[3500:, 0:1].values  # 后300天的开盘价作为测试集
+
+# 归一化
+sc = MinMaxScaler(feature_range=(0, 1))  # 定义归一化：归一化到(0，1)之间
+training_set_scaled = sc.fit_transform(training_set)  # 求得训练集的最大值，最小值这些训练集固有的属性，并在训练集上进行归一化
+test_set = sc.transform(test_set)  # 利用训练集的属性对测试集进行归一化
+print(training_set_scaled)
+
+x_train = []
+y_train = []
+
+x_test = []
+y_test = []
+
+# 测试集：csv表格中前2426-300=2126天数据
+# 利用for循环，遍历整个训练集，提取训练集中连续60天的开盘价作为输入特征x_train，第61天的数据作为标签，for循环共构建2426-300-60=2066组数据。
+for i in range(60, len(training_set_scaled)):
+    x_train.append(training_set_scaled[i - 60:i, 0])
+    y_train.append(training_set_scaled[i, 0])
+# 对训练集进行打乱
+np.random.seed(7)
+np.random.shuffle(x_train)
+np.random.seed(7)
+np.random.shuffle(y_train)
+# 将训练集由list格式变为array格式
+x_train, y_train = np.array(x_train), np.array(y_train)
+
+# 使x_train符合RNN输入要求：[送入样本数， 循环核时间展开步数， 每个时间步输入特征个数]。
+# 此处整个数据集送入，送入样本数为x_train.shape[0]即2066组数据；输入60个开盘价，预测出第61天的开盘价，循环核时间展开步数为60; 每个时间步送入的特征是某一天的开盘价，只有1个数据，故每个时间步输入特征个数为1
+x_train = np.reshape(x_train, (x_train.shape[0], 60, 1))
+# 测试集：csv表格中后300天数据
+# 利用for循环，遍历整个测试集，提取测试集中连续60天的开盘价作为输入特征x_train，第61天的数据作为标签，for循环共构建300-60=240组数据。
+for i in range(60, len(test_set)):
+    x_test.append(test_set[i - 60:i, 0])
+    y_test.append(test_set[i, 0])
+# 测试集变array并reshape为符合RNN输入要求：[送入样本数， 循环核时间展开步数， 每个时间步输入特征个数]
+x_test, y_test = np.array(x_test), np.array(y_test)
+x_test = np.reshape(x_test, (x_test.shape[0], 60, 1))
+
+x_train, y_train, x_test, y_test = torch.from_numpy(x_train), torch.from_numpy(y_train), torch.from_numpy(
+    x_test), torch.from_numpy(y_test)
+
+'''model'''
+
+
+class GRU(nn.Module):
+    def __init__(self, input_size=2, hidden_size=4, output_size=1, num_layer=2):
+        super(GRU, self).__init__()
+        self.gru1 = nn.GRU(input_size, hidden_size, num_layer)
+        self.drop1 = nn.Dropout(0.2)
+        self.gru2 = nn.GRU(input_size, hidden_size, num_layer)
+        self.drop2 = nn.Dropout(0.2)
+        self.linear = nn.Linear()
+
+    def forward(self, out):
+        out = self.gru1(out)
+        out = self.drop1(out)
+        out = self.gru2(out)
+        out = self.drop2(out)
+        out = self.linear(out)
+
+        return out
+
+
+model.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='mean_squared_error')
+
+checkpoint_save_path = "cache/checkpoint/temp_40m_single.ckpt"
+
+if os.path.exists(checkpoint_save_path + '.index'):
+    print('-------------load the model-----------------')
+    model.load_weights(checkpoint_save_path)
+
+cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_save_path,
+                                                 save_weights_only=True,
+                                                 save_best_only=True,
+                                                 monitor='val_loss')
+
+# 训练网络
+history = model.fit(train_X, train_y, epochs=epochs, batch_size=batch_size, validation_data=(test_X, test_y),
+                    verbose=1, shuffle=False, validation_freq=1, callbacks=[cp_callback])
+
+'''save'''
+
+model.summary()
+
+file = open('cache/weights/temp_40m_single.txt', 'w')  # 参数提取
+for v in model.trainable_variables:
+    file.write(str(v.name) + '\n')
+    file.write(str(v.shape) + '\n')
+    file.write(str(v.numpy()) + '\n')
+file.close()
+
+# 绘画loss和var_loss展示训练效果
+plt.plot(history.history['loss'], label='train')
+plt.plot(history.history['val_loss'], label='test')
+plt.legend()
+plt.show()
+
+'''predict'''
+
+# 测试集输入模型进行预测
+predicted_stock_price = model.predict(test_X)
+# 对预测数据还原---从（0，1）反归一化到原始范围
+predicted_stock_price = sc.inverse_transform(predicted_stock_price)
+# 对真实数据还原---从（0，1）反归一化到原始范围
+real_stock_price = sc.inverse_transform(test_set[60:])
+# 画出真实数据和预测数据的对比曲线
+plt.plot(real_stock_price, color='red', label='MaoTai Stock Price')
+plt.plot(predicted_stock_price, color='blue', label='Predicted MaoTai Stock Price')
+plt.title('40M Temperature Prediction')
+plt.xlabel('Time')
+plt.ylabel('Temperature')
+plt.legend()
+plt.show()
+
+'''evaluate'''
+
+# calculate MSE 均方误差 ---> E[(预测值-真实值)^2] (预测值减真实值求平方后求均值)
+mse = mean_squared_error(predicted_stock_price, real_stock_price)
+# calculate RMSE 均方根误差--->sqrt[MSE]    (对均方误差开方)
+rmse = sqrt(mean_squared_error(predicted_stock_price, real_stock_price))
+# calculate MAE 平均绝对误差----->E[|预测值-真实值|](预测值减真实值求绝对值后求均值）
+mae = mean_absolute_error(predicted_stock_price, real_stock_price)
+print('均方误差: %.6f' % mse)
+print('均方根误差: %.6f' % rmse)
+print('平均绝对误差: %.6f' % mae)

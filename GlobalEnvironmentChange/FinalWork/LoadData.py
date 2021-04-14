@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 # convert series to supervised learning
-def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
+def series_to_supervised(data, predict_list, n_in=1, n_out=1, dropnan=True):
     n_vars = 1 if type(data) is list else data.shape[1]
     df = pd.DataFrame(data)
     cols, names = list(), list()
@@ -29,6 +29,8 @@ def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
     # drop rows with NaN values
     if dropnan:
         agg.dropna(inplace=True)
+    drop_list = [i for i in range(n_vars) if i not in predict_list]
+    agg.drop(agg.columns[drop_list], axis=1, inplace=True)
     return agg
 
 

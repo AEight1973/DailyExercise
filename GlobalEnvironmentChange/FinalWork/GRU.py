@@ -25,26 +25,26 @@ batch_size = 64
 epochs = 50
 time_steps = 14
 
-# load dataset
+
+'''dataset'''
+
 dataset = csv2datasets()
 values = dataset.values
 nb_classes = values.shape[1]
-# ensure all data is float
+# 数据转化为 float32
 values = values.astype('float32')
-# normalize features
+# 数据标准化 (0,1)
 scaler = MinMaxScaler(feature_range=(0, 1))
 scaled = scaler.fit_transform(values)
-# frame as supervised learning
-reframed = series_to_supervised(scaled, time_steps)
-# drop columns we don't want to predict
-drop_list = list(range(- nb_classes, -1))
-reframed.drop(reframed.columns[drop_list], axis=1, inplace=True)
-print(reframed.head())
+# 时间序列转化为数据集
+predict_list = [2]
+reframed = series_to_supervised(scaled, predict_list, time_steps)
+print('reframed data:', reframed.head())
 
-# split into train and test sets
+# 分割成测试集与测试集
 values = reframed.values
 train_X, test_X, train_y, test_y = train_test_split(values[:, :-1], values[:, -1], test_size=0.2)
-# reshape input to be 3D [samples, timesteps, features]
+# reshape为符合RNN输入要求：[送入样本数， 循环核时间展开步数， 每个时间步输入特征个数]
 train_X = train_X.reshape((train_X.shape[0], time_steps, nb_classes))
 test_X = test_X.reshape((test_X.shape[0], time_steps, nb_classes))
 print('train_X.shape:', train_X.shape, 'train_y.shape:', train_y.shape, '\n')
@@ -56,26 +56,31 @@ np.random.shuffle(train_X)
 np.random.seed(7)
 np.random.shuffle(train_y)
 
-# 建立模型
+
+'''model'''
+
 model = Sequential()
 model.add(GRU(80, return_sequences=True))
 model.add(Dropout(0.2))
 model.add(GRU(100))
 model.add(Dropout(0.2))
 model.add(Dense(1))
+
 model.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='mean_squared_error')
 
-# fit network
+# 训练网络
 history = model.fit(train_X, train_y, epochs=epochs, batch_size=batch_size, validation_data=(test_X, test_y),
                     verbose=1, shuffle=False)
 
-# plot history
+# 绘画loss和var_loss展示训练效果
 plt.plot(history.history['loss'], label='train')
 plt.plot(history.history['val_loss'], label='test')
 plt.legend()
 plt.show()
 
-# predict
+
+'''predict'''
+
 # 测试集输入模型进行预测
 predicted_stock_price = model.predict(test_X)
 # 对预测数据还原---从（0，1）反归一化到原始范围
@@ -91,7 +96,9 @@ plt.ylabel('Temperature')
 plt.legend()
 plt.show()
 
-# evaluate
+
+'''evaluate'''
+
 # calculate MSE 均方误差 ---> E[(预测值-真实值)^2] (预测值减真实值求平方后求均值)
 mse = mean_squared_error(predicted_stock_price, real_stock_price)
 # calculate RMSE 均方根误差--->sqrt[MSE]    (对均方误差开方)

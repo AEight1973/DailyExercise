@@ -54,6 +54,7 @@ np.random.seed(7)
 np.random.shuffle(train_X)
 np.random.seed(7)
 np.random.shuffle(train_y)
+tf.random.set_seed(7)
 
 
 '''model'''

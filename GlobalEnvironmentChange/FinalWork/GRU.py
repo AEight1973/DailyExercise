@@ -1,10 +1,8 @@
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
-from sklearn.metrics import mean_squared_error
 from keras.models import Sequential
 from keras.layers import GRU, Dropout, Dense
-from numpy import concatenate, c_
 from math import sqrt
 from LoadData import *
 import tensorflow as tf
@@ -23,39 +21,57 @@ session = tf.compat.v1.Session(config=config)
 # 设置全局变量
 batch_size = 64
 epochs = 50
-time_steps = 14
+time_steps = 60
 
 
-'''dataset'''
+'''
+dataset
+数据集说明
+'''
 
 dataset = csv2datasets()
-values = dataset.values
-nb_classes = values.shape[1]
-# 数据转化为 float32
-values = values.astype('float32')
-# 数据标准化 (0,1)
-scaler = MinMaxScaler(feature_range=(0, 1))
-scaled = scaler.fit_transform(values)
-# 时间序列转化为数据集
-reframed = series_to_supervised(scaled, time_steps)
-print('reframed data:', reframed.head())
+training_set = dataset.iloc[0:3500, 0:1].values  # 前(2426-300=2126)天的开盘价作为训练集,表格从0开始计数，2:3 是提取[2:3)列，前闭后开,故提取出C列开盘价
+test_set = dataset.iloc[3500:, 0:1].values  # 后300天的开盘价作为测试集
 
-# 分割成测试集与测试集
-values = reframed.values
-train_X, test_X, train_y, test_y = train_test_split(values[:, :-1], values[:, -1], test_size=0.2)
-# reshape为符合RNN输入要求：[送入样本数， 循环核时间展开步数， 每个时间步输入特征个数]
-train_X = train_X.reshape((train_X.shape[0], time_steps, nb_classes))
-test_X = test_X.reshape((test_X.shape[0], time_steps, nb_classes))
-print('train_X.shape:', train_X.shape, 'train_y.shape:', train_y.shape, '\n')
-print('test_X.shape:', test_X.shape, 'test_y.shape:', test_y.shape, '\n')
 
-# 打乱训练集
+# 归一化
+sc = MinMaxScaler(feature_range=(0, 1))  # 定义归一化：归一化到(0，1)之间
+training_set_scaled = sc.fit_transform(training_set)  # 求得训练集的最大值，最小值这些训练集固有的属性，并在训练集上进行归一化
+test_set = sc.transform(test_set)  # 利用训练集的属性对测试集进行归一化
+print(training_set_scaled)
+
+x_train = []
+y_train = []
+
+x_test = []
+y_test = []
+
+# 测试集：csv表格中前2426-300=2126天数据
+# 利用for循环，遍历整个训练集，提取训练集中连续60天的开盘价作为输入特征x_train，第61天的数据作为标签，for循环共构建2426-300-60=2066组数据。
+for i in range(60, len(training_set_scaled)):
+    x_train.append(training_set_scaled[i - 60:i, 0])
+    y_train.append(training_set_scaled[i, 0])
+# 对训练集进行打乱
 np.random.seed(7)
-np.random.shuffle(train_X)
+np.random.shuffle(x_train)
 np.random.seed(7)
-np.random.shuffle(train_y)
+np.random.shuffle(y_train)
 tf.random.set_seed(7)
+# 将训练集由list格式变为array格式
+x_train, y_train = np.array(x_train), np.array(y_train)
 
+# 使x_train符合RNN输入要求：[送入样本数， 循环核时间展开步数， 每个时间步输入特征个数]。
+# 此处整个数据集送入，送入样本数为x_train.shape[0]即2066组数据；输入60个开盘价，预测出第61天的开盘价，循环核时间展开步数为60; 每个时间步送入的特征是某一天的开盘价，只有1个数据，故每个时间步输入特征个数为1
+x_train = np.reshape(x_train, (x_train.shape[0], 60, 1))
+# 测试集：csv表格中后300天数据
+# 利用for循环，遍历整个测试集，提取测试集中连续60天的开盘价作为输入特征x_train，第61天的数据作为标签，for循环共构建300-60=240组数据。
+for i in range(60, len(test_set)):
+    x_test.append(test_set[i - 60:i, 0])
+    y_test.append(test_set[i, 0])
+# 测试集变array并reshape为符合RNN输入要求：[送入样本数， 循环核时间展开步数， 每个时间步输入特征个数]
+x_test, y_test = np.array(x_test), np.array(y_test)
+x_test = np.reshape(x_test, (x_test.shape[0], 60, 1))
+train_X, train_y, test_X, test_y = x_train, y_train, x_test, y_test
 
 '''model'''
 
@@ -68,9 +84,32 @@ model.add(Dense(1))
 
 model.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='mean_squared_error')
 
+checkpoint_save_path = "cache/checkpoint/temp_40m_single.ckpt"
+
+if os.path.exists(checkpoint_save_path + '.index'):
+    print('-------------load the model-----------------')
+    model.load_weights(checkpoint_save_path)
+
+cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_save_path,
+                                                 save_weights_only=True,
+                                                 save_best_only=True,
+                                                 monitor='val_loss')
+
 # 训练网络
 history = model.fit(train_X, train_y, epochs=epochs, batch_size=batch_size, validation_data=(test_X, test_y),
-                    verbose=1, shuffle=False)
+                    verbose=1, shuffle=False, validation_freq=1, callbacks=[cp_callback])
+
+
+'''save'''
+
+model.summary()
+
+file = open('cache/weights/temp_40m_single.txt', 'w')  # 参数提取
+for v in model.trainable_variables:
+    file.write(str(v.name) + '\n')
+    file.write(str(v.shape) + '\n')
+    file.write(str(v.numpy()) + '\n')
+file.close()
 
 # 绘画loss和var_loss展示训练效果
 plt.plot(history.history['loss'], label='train')
@@ -84,9 +123,9 @@ plt.show()
 # 测试集输入模型进行预测
 predicted_stock_price = model.predict(test_X)
 # 对预测数据还原---从（0，1）反归一化到原始范围
-predicted_stock_price = scaler.inverse_transform(predicted_stock_price)
+predicted_stock_price = sc.inverse_transform(predicted_stock_price)
 # 对真实数据还原---从（0，1）反归一化到原始范围
-real_stock_price = scaler.inverse_transform(scaled)
+real_stock_price = sc.inverse_transform(test_set[60:])
 # 画出真实数据和预测数据的对比曲线
 plt.plot(real_stock_price, color='red', label='MaoTai Stock Price')
 plt.plot(predicted_stock_price, color='blue', label='Predicted MaoTai Stock Price')

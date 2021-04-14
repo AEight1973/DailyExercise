@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 # convert series to supervised learning
-def series_to_supervised(data, predict_list, n_in=1, n_out=1, dropnan=True):
+def series_to_supervised(data, n_in=1, n_out=1, predict_list=[0], dropnan=True):
     n_vars = 1 if type(data) is list else data.shape[1]
     df = pd.DataFrame(data)
     cols, names = list(), list()

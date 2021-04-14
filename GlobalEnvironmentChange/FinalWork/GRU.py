@@ -37,8 +37,7 @@ values = values.astype('float32')
 scaler = MinMaxScaler(feature_range=(0, 1))
 scaled = scaler.fit_transform(values)
 # 时间序列转化为数据集
-predict_list = [2]
-reframed = series_to_supervised(scaled, predict_list, time_steps)
+reframed = series_to_supervised(scaled, time_steps)
 print('reframed data:', reframed.head())
 
 # 分割成测试集与测试集

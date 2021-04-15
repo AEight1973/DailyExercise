@@ -23,7 +23,6 @@ test_set = dataset.iloc[3500:, 0:1].values  # 后300天的开盘价作为测试�
 sc = MinMaxScaler(feature_range=(0, 1))  # 定义归一化：归一化到(0，1)之间
 training_set_scaled = sc.fit_transform(training_set)  # 求得训练集的最大值，最小值这些训练集固有的属性，并在训练集上进行归一化
 test_set = sc.transform(test_set)  # 利用训练集的属性对测试集进行归一化
-print(training_set_scaled)
 
 x_train = []
 y_train = []
@@ -37,16 +36,17 @@ for i in range(60, len(training_set_scaled)):
     x_train.append(training_set_scaled[i - 60:i, 0])
     y_train.append(training_set_scaled[i, 0])
 # 对训练集进行打乱
-np.random.seed(7)
-np.random.shuffle(x_train)
-np.random.seed(7)
-np.random.shuffle(y_train)
+# np.random.seed(7)
+# np.random.shuffle(x_train)
+# np.random.seed(7)
+# np.random.shuffle(y_train)
 # 将训练集由list格式变为array格式
 x_train, y_train = torch.FloatTensor(x_train), torch.FloatTensor(y_train)
 
 # 使x_train符合RNN(PyTorch)输入要求：[循环核时间展开步数， 送入样本数， 每个时间步输入特征个数]。
 # 此处整个数据集送入，送入样本数为x_train.shape[0]即2066组数据；输入60个开盘价，预测出第61天的开盘价，循环核时间展开步数为60; 每个时间步送入的特征是某一天的开盘价，只有1个数据，故每个时间步输入特征个数为1
-x_train = x_train.view(60, x_train.shape[0], 1)
+x_train = x_train.view(x_train.shape[0], 60, 1)
+
 # 测试集：csv表格中后300天数据
 # 利用for循环，遍历整个测试集，提取测试集中连续60天的开盘价作为输入特征x_train，第61天的数据作为标签，for循环共构建300-60=240组数据。
 for i in range(60, len(test_set)):
@@ -54,7 +54,7 @@ for i in range(60, len(test_set)):
     y_test.append(test_set[i, 0])
 # 测试集变array并reshape为符合RNN(PyTorch)输入要求：[循环核时间展开步数， 送入样本数， 每个时间步输入特征个数]
 x_test, y_test = torch.FloatTensor(x_test), torch.FloatTensor(y_test)
-x_test = x_test.view(60, x_test.shape[0], 1)
+x_test = x_test.view(x_test.shape[0], 60, 1)
 
 # 使用torch的TensorDataset进行数据集的分批处理
 train_ds = TensorDataset(x_train, y_train)
@@ -68,8 +68,8 @@ valid_dl = DataLoader(dataset=valid_ds, batch_size=128)
 class GRU(nn.Module):
     def __init__(self):
         super(GRU, self).__init__()
-        self.gru1 = nn.GRU(input_size=1, hidden_size=64, num_layers=1, dropout=0.2, batch_first=True)
-        self.linear = nn.Linear(in_features=64, out_features=1)
+        self.gru1 = nn.GRU(input_size=1, hidden_size=10, num_layers=2, dropout=0.2, batch_first=True)
+        self.linear = nn.Linear(in_features=10, out_features=1)
 
     def forward(self, _x):
         _x, _ = self.gru1(_x)
@@ -105,12 +105,12 @@ for e in range(50):
         _loss.backward()
         optimizer.step()
 
-        loss += _loss.data[0]
+        loss += _loss.item()
 
     # 加入验证集
     model.eval()  # 评估模型
     with torch.no_grad():
-        valid_loss = sum(criterion(model(xb), yb) for xb, yb in valid_dl)
+        valid_loss = sum(criterion(model(xb.cuda()), yb.cuda()) for xb, yb in valid_dl)
 
     print('Epoch: {}, Loss: {:.5f}, Valid_Loss: {:.5f}'.format(e + 1, loss / len(train_dl), valid_loss / len(valid_dl)))
     Loss.append(loss / len(train_dl))
@@ -135,27 +135,47 @@ model = model.eval()  # 转换成测试模式
 
 # 对真实数据进行绘图
 real_data = dataset.values
-plt.plot(real_data, color='red', label='40M Real Temperature')
+real_time = dataset.index
+plt.plot(real_time, real_data, color='red', label='40M Real Temperature')
 
 # 对训练数据进行绘图
-var_train = Variable(x_train)
+var_train = Variable(x_train).cuda()
 pred_train = model(var_train)
 # 改变输出的格式
-pred_train = pred_train.view(-1).data.numpy()
+pred_train = pred_train.data.cpu().numpy()[:, -1, 0].reshape(-1, 1)
 # 对训练数据还原---从（0，1）反归一化到原始范围
-trained_stock_price = sc.inverse_transform(pred_train)
+train_temp = sc.inverse_transform(pred_train)
 # 画出真实数据和预测数据的对比曲线
-plt.plot(trained_stock_price, color='blue', label='40M Train Temperature')
+train_time = real_time[60: 3500]
+plt.plot(train_time, train_temp, color='blue', label='40M Train Temperature')
 
 # 对测试数据进行绘图
-var_test = Variable(x_train)
-pred_test = model(var_train)
+var_test = Variable(x_test).cuda()
+pred_test = model(var_test)
 # 改变输出的格式
-pred_test = pred_test.view(-1).data.numpy()
+pred_test = pred_test.data.cpu().numpy()[:, -1, 0].reshape(-1, 1)
 # 对测试数据还原---从（0，1）反归一化到原始范围
-predicted_stock_price = sc.inverse_transform(pred_train)
+test_temp = sc.inverse_transform(pred_test)
 # 画出真实数据和预测数据的对比曲线
-plt.plot(predicted_stock_price, color='green', label='40M Predict Temperature')
+test_time = real_time[3560:]
+plt.plot(test_time, test_temp, color='green', label='40M Test Temperature')
+
+# 对未来一年进行预测
+predict_time = []
+predict_data = list(real_data.T[0])
+_time = real_time[-1]
+for i in range(367):
+    if _time.hour == 0 and _time.month == 10:
+        _time = datetime.datetime(_time.year + 1, 4, 1, 0, 0, 0)
+    else:
+        _time += datetime.timedelta(hours=12)
+    var_predict = Variable(torch.FloatTensor(predict_data[-60:]).view(1, 60, 1)).cuda()
+    pred_predict = model(var_predict)
+    predict_data.append(pred_predict.data.cpu().numpy()[0, -1, 0])
+    predict_time.append(_time)
+predict_temp = predict_data[-367:]
+plt.plot(predict_time, predict_temp, color='black', label='40M Predict Temperature')
+
 
 plt.title('40M Temperature Training Consult')
 plt.xlabel('Time')

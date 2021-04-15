@@ -62,7 +62,6 @@ train_dl = DataLoader(dataset=train_ds, batch_size=128, shuffle=True)
 valid_ds = TensorDataset(x_test, y_test)
 valid_dl = DataLoader(dataset=valid_ds, batch_size=128)
 
-
 '''model'''
 
 
@@ -87,6 +86,7 @@ criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
 # 开始训练
+Loss, Valid_Loss = [], []
 for e in range(50):
     model.train()
 
@@ -113,34 +113,55 @@ for e in range(50):
         valid_loss = sum(criterion(model(xb), yb) for xb, yb in valid_dl)
 
     print('Epoch: {}, Loss: {:.5f}, Valid_Loss: {:.5f}'.format(e + 1, loss / len(train_dl), valid_loss / len(valid_dl)))
+    Loss.append(loss / len(train_dl))
+    Valid_Loss.append(valid_loss / len(valid_dl))
+
+plt.plot(Loss, color='red', label='loss')
+plt.plot(Valid_Loss, color='blue', label='valid_loss')
+plt.title('Model Training')
+plt.xlabel('epoch')
+plt.ylabel('value')
+plt.legend()
+plt.show()
 
 '''save'''
 
 PATH = 'cache/model/temp_40m_single_{}'.format(datetime.datetime.now().strftime('%y%m%d%H%M%S'))
 torch.save(model, PATH)
 
-# '''predict'''
-# # 测试集输入模型进行预测
-# model = model.eval() # 转换成测试模式
-#
-# data_X = data_X.reshape(-1, 1, 2)
-# data_X = torch.from_numpy(data_X)
-# var_data = Variable(data_X)
-# pred_test = model(var_data) # 测试集的预测结果
-# # 改变输出的格式
-# pred_test = pred_test.view(-1).data.numpy()
-# # 对预测数据还原---从（0，1）反归一化到原始范围
-# predicted_stock_price = sc.inverse_transform(predicted_stock_price)
-# # 对真实数据还原---从（0，1）反归一化到原始范围
-# real_stock_price = sc.inverse_transform(test_set[60:])
-# # 画出真实数据和预测数据的对比曲线
-# plt.plot(real_stock_price, color='red', label='MaoTai Stock Price')
-# plt.plot(predicted_stock_price, color='blue', label='Predicted MaoTai Stock Price')
-# plt.title('40M Temperature Prediction')
-# plt.xlabel('Time')
-# plt.ylabel('Temperature')
-# plt.legend()
-# plt.show()
+'''predict'''
+# 测试集输入模型进行预测
+model = model.eval()  # 转换成测试模式
+
+# 对真实数据进行绘图
+real_data = dataset.values
+plt.plot(real_data, color='red', label='40M Real Temperature')
+
+# 对训练数据进行绘图
+var_train = Variable(x_train)
+pred_train = model(var_train)
+# 改变输出的格式
+pred_train = pred_train.view(-1).data.numpy()
+# 对训练数据还原---从（0，1）反归一化到原始范围
+trained_stock_price = sc.inverse_transform(pred_train)
+# 画出真实数据和预测数据的对比曲线
+plt.plot(trained_stock_price, color='blue', label='40M Train Temperature')
+
+# 对测试数据进行绘图
+var_test = Variable(x_train)
+pred_test = model(var_train)
+# 改变输出的格式
+pred_test = pred_test.view(-1).data.numpy()
+# 对测试数据还原---从（0，1）反归一化到原始范围
+predicted_stock_price = sc.inverse_transform(pred_train)
+# 画出真实数据和预测数据的对比曲线
+plt.plot(predicted_stock_price, color='green', label='40M Predict Temperature')
+
+plt.title('40M Temperature Training Consult')
+plt.xlabel('Time')
+plt.ylabel('Temperature')
+plt.legend()
+plt.show()
 #
 # '''evaluate'''
 #

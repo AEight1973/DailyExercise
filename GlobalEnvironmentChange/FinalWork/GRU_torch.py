@@ -162,7 +162,7 @@ plt.plot(test_time, test_temp, color='green', label='40M Test Temperature')
 
 # 对未来一年进行预测
 predict_time = []
-predict_data = list(real_data.T[0])
+predict_data = list(sc.transform(real_data).T[0])
 _time = real_time[-1]
 for i in range(367):
     if _time.hour == 0 and _time.month == 10:
@@ -173,8 +173,8 @@ for i in range(367):
     pred_predict = model(var_predict)
     predict_data.append(pred_predict.data.cpu().numpy()[0, -1, 0])
     predict_time.append(_time)
-predict_temp = predict_data[-367:]
-plt.plot(predict_time, predict_temp, color='black', label='40M Predict Temperature')
+predict_temp = sc.inverse_transform(np.array(predict_data[-367:]).reshape(-1,1))
+plt.plot(predict_time, predict_temp, color='orange', label='40M Predict Temperature')
 
 
 plt.title('40M Temperature Training Consult')
@@ -182,15 +182,16 @@ plt.xlabel('Time')
 plt.ylabel('Temperature')
 plt.legend()
 plt.show()
-#
-# '''evaluate'''
-#
-# # calculate MSE 均方误差 ---> E[(预测值-真实值)^2] (预测值减真实值求平方后求均值)
-# mse = mean_squared_error(predicted_stock_price, real_stock_price)
-# # calculate RMSE 均方根误差--->sqrt[MSE]    (对均方误差开方)
-# rmse = sqrt(mean_squared_error(predicted_stock_price, real_stock_price))
-# # calculate MAE 平均绝对误差----->E[|预测值-真实值|](预测值减真实值求绝对值后求均值）
-# mae = mean_absolute_error(predicted_stock_price, real_stock_price)
-# print('均方误差: %.6f' % mse)
-# print('均方根误差: %.6f' % rmse)
-# print('平均绝对误差: %.6f' % mae)
+
+'''evaluate'''
+
+# calculate MSE 均方误差 ---> E[(预测值-真实值)^2] (预测值减真实值求平方后求均值)
+real_temp = real_data[3560:, 0:1]
+mse = mean_squared_error(test_temp, real_temp)
+# calculate RMSE 均方根误差--->sqrt[MSE]    (对均方误差开方)
+rmse = sqrt(mean_squared_error(test_temp, real_temp))
+# calculate MAE 平均绝对误差----->E[|预测值-真实值|](预测值减真实值求绝对值后求均值）
+mae = mean_absolute_error(test_temp, real_temp)
+print('均方误差: %.6f' % mse)
+print('均方根误差: %.6f' % rmse)
+print('平均绝对误差: %.6f' % mae)

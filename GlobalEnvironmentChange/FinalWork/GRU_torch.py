@@ -2,11 +2,13 @@ from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 from math import sqrt
+from torch.utils.data import TensorDataset, DataLoader
 from LoadData import *
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import torch
 from torch import nn
 from torch.autograd import Variable
+import datetime
 
 '''
 dataset
@@ -40,22 +42,26 @@ np.random.shuffle(x_train)
 np.random.seed(7)
 np.random.shuffle(y_train)
 # 将训练集由list格式变为array格式
-x_train, y_train = np.array(x_train), np.array(y_train)
+x_train, y_train = torch.FloatTensor(x_train), torch.FloatTensor(y_train)
 
 # 使x_train符合RNN(PyTorch)输入要求：[循环核时间展开步数， 送入样本数， 每个时间步输入特征个数]。
 # 此处整个数据集送入，送入样本数为x_train.shape[0]即2066组数据；输入60个开盘价，预测出第61天的开盘价，循环核时间展开步数为60; 每个时间步送入的特征是某一天的开盘价，只有1个数据，故每个时间步输入特征个数为1
-x_train = np.reshape(x_train, (60, x_train.shape[0],  1))
+x_train = x_train.view(60, x_train.shape[0], 1)
 # 测试集：csv表格中后300天数据
 # 利用for循环，遍历整个测试集，提取测试集中连续60天的开盘价作为输入特征x_train，第61天的数据作为标签，for循环共构建300-60=240组数据。
 for i in range(60, len(test_set)):
     x_test.append(test_set[i - 60:i, 0])
     y_test.append(test_set[i, 0])
 # 测试集变array并reshape为符合RNN(PyTorch)输入要求：[循环核时间展开步数， 送入样本数， 每个时间步输入特征个数]
-x_test, y_test = np.array(x_test), np.array(y_test)
-x_test = np.reshape(x_test, (60, x_test.shape[0],  1))
+x_test, y_test = torch.FloatTensor(x_test), torch.FloatTensor(y_test)
+x_test = x_test.view(60, x_test.shape[0], 1)
 
-x_train, y_train, x_test, y_test = torch.from_numpy(x_train).to(torch.float32), torch.from_numpy(y_train).to(torch.float32), torch.from_numpy(
-    x_test).to(torch.float32), torch.from_numpy(y_test).to(torch.float32)
+# 使用torch的TensorDataset进行数据集的分批处理
+train_ds = TensorDataset(x_train, y_train)
+train_dl = DataLoader(dataset=train_ds, batch_size=128, shuffle=True)
+valid_ds = TensorDataset(x_test, y_test)
+valid_dl = DataLoader(dataset=valid_ds, batch_size=128)
+
 
 '''model'''
 
@@ -68,7 +74,6 @@ class GRU(nn.Module):
 
     def forward(self, _x):
         _x, _ = self.gru1(_x)
-        print(_x)
         s, b, h = _x.shape
         _x = _x.contiguous().view(s * b, h)  # 转换成线性层的输入格式
         _x = self.linear(_x)
@@ -82,24 +87,38 @@ criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
 # 开始训练
-for e in range(1000):
-    var_x = Variable(x_train).cuda()
-    var_y = Variable(y_train).cuda()
-    # 前向传播
-    out = model(var_x)
-    loss = criterion(out, var_y)
-    # 反向传播
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
+for e in range(50):
+    model.train()
 
-    if (e + 1) % 100 == 0:  # 每 100 次输出结果
-        print('Epoch: {}, Loss: {:.5f}'.format(e + 1, loss.data[0]))
+    loss = 0
+    for xb, yb in train_dl:
+        # 转化数据
+        var_x = Variable(xb).cuda()
+        var_y = Variable(xb).cuda()
 
-# '''save'''
-#
-#
-#
+        # 前向传播
+        out = model(var_x)
+        _loss = criterion(out, var_y)
+
+        # 反向传播
+        optimizer.zero_grad()
+        _loss.backward()
+        optimizer.step()
+
+        loss += _loss.data[0]
+
+    # 加入验证集
+    model.eval()  # 评估模型
+    with torch.no_grad():
+        valid_loss = sum(criterion(model(xb), yb) for xb, yb in valid_dl)
+
+    print('Epoch: {}, Loss: {:.5f}, Valid_Loss: {:.5f}'.format(e + 1, loss / len(train_dl), valid_loss / len(valid_dl)))
+
+'''save'''
+
+PATH = 'cache/model/temp_40m_single_{}'.format(datetime.datetime.now().strftime('%y%m%d%H%M%S'))
+torch.save(model, PATH)
+
 # '''predict'''
 # # 测试集输入模型进行预测
 # model = model.eval() # 转换成测试模式

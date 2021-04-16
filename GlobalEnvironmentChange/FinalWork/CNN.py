@@ -9,7 +9,7 @@ import torch.utils.data as Data
 EPOCH = 3
 BATCH_SIZE = 50
 LR = 0.001
-DOWNLOAD_MINIST = True
+DOWNLOAD_MINIST = False
 
 train_data = torchvision.datasets.MNIST(
     root='./MINIST',

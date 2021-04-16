@@ -9,7 +9,7 @@ import torch.utils.data as Data
 EPOCH = 3
 BATCH_SIZE = 50
 LR = 0.001
-DOWNLOAD_MINIST = False
+DOWNLOAD_MINIST = True
 
 train_data = torchvision.datasets.MNIST(
     root='./MINIST',
@@ -96,12 +96,12 @@ for epoch in range(EPOCH):
             accuracy = float((pred_y == test_y.data.numpy()).astype(int).sum()) / float(test_y.size(0))
             print('Epoch: ', epoch, '| train loss: %.4f' % loss.data.numpy(), '| test accuracy: %.2f' % accuracy)
 
-# torch.save(cnn,'cnn_minist.pkl')
+torch.save(cnn,'cnn_minist.pkl')
 print('finish training')
 
-# print('load cnn model')
-# cnn1 = torch.load('cnn_minist.pkl')
-# test_output = cnn1(test_x[:50])
-# pred_y = torch.max(test_output, 1)[1].data.numpy()
-# print(pred_y, 'prediction number')
-# print(test_y[:50].numpy(), 'real number')
+print('load cnn model')
+cnn1 = torch.load('cnn_minist.pkl')
+test_output = cnn1(test_x[:50])
+pred_y = torch.max(test_output, 1)[1].data.numpy()
+print(pred_y, 'prediction number')
+print(test_y[:50].numpy(), 'real number')

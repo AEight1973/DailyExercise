@@ -1,5 +1,4 @@
 from matplotlib import pyplot as plt
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 from math import sqrt
 from torch.utils.data import TensorDataset, DataLoader
@@ -9,6 +8,16 @@ import torch
 from torch import nn
 from torch.autograd import Variable
 import datetime
+
+'''
+global
+全局变量
+'''
+
+epoch = 50
+time_step = 14
+batch_size = 128
+n_feature = 1
 
 '''
 dataset
@@ -32,35 +41,30 @@ y_test = []
 
 # 测试集：csv表格中前2426-300=2126天数据
 # 利用for循环，遍历整个训练集，提取训练集中连续60天的开盘价作为输入特征x_train，第61天的数据作为标签，for循环共构建2426-300-60=2066组数据。
-for i in range(60, len(training_set_scaled)):
-    x_train.append(training_set_scaled[i - 60:i, 0])
+for i in range(time_step, len(training_set_scaled)):
+    x_train.append(training_set_scaled[i - time_step:i, 0])
     y_train.append(training_set_scaled[i, 0])
-# 对训练集进行打乱
-# np.random.seed(7)
-# np.random.shuffle(x_train)
-# np.random.seed(7)
-# np.random.shuffle(y_train)
 # 将训练集由list格式变为array格式
 x_train, y_train = torch.FloatTensor(x_train), torch.FloatTensor(y_train)
 
 # 使x_train符合RNN(PyTorch)输入要求：[循环核时间展开步数， 送入样本数， 每个时间步输入特征个数]。
 # 此处整个数据集送入，送入样本数为x_train.shape[0]即2066组数据；输入60个开盘价，预测出第61天的开盘价，循环核时间展开步数为60; 每个时间步送入的特征是某一天的开盘价，只有1个数据，故每个时间步输入特征个数为1
-x_train = x_train.view(x_train.shape[0], 60, 1)
+x_train = x_train.view(-1, time_step, n_feature)
 
 # 测试集：csv表格中后300天数据
 # 利用for循环，遍历整个测试集，提取测试集中连续60天的开盘价作为输入特征x_train，第61天的数据作为标签，for循环共构建300-60=240组数据。
-for i in range(60, len(test_set)):
-    x_test.append(test_set[i - 60:i, 0])
+for i in range(time_step, len(test_set)):
+    x_test.append(test_set[i - time_step:i, 0])
     y_test.append(test_set[i, 0])
 # 测试集变array并reshape为符合RNN(PyTorch)输入要求：[循环核时间展开步数， 送入样本数， 每个时间步输入特征个数]
 x_test, y_test = torch.FloatTensor(x_test), torch.FloatTensor(y_test)
-x_test = x_test.view(x_test.shape[0], 60, 1)
+x_test = x_test.view(-1, time_step, n_feature)
 
 # 使用torch的TensorDataset进行数据集的分批处理
 train_ds = TensorDataset(x_train, y_train)
-train_dl = DataLoader(dataset=train_ds, batch_size=128, shuffle=True)
+train_dl = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=True)
 valid_ds = TensorDataset(x_test, y_test)
-valid_dl = DataLoader(dataset=valid_ds, batch_size=128)
+valid_dl = DataLoader(dataset=valid_ds, batch_size=batch_size)
 
 '''model'''
 
@@ -87,7 +91,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
 # 开始训练
 Loss, Valid_Loss = [], []
-for e in range(50):
+for e in range(epoch):
     model.train()
 
     loss = 0
@@ -146,7 +150,7 @@ pred_train = pred_train.data.cpu().numpy()[:, -1, 0].reshape(-1, 1)
 # 对训练数据还原---从（0，1）反归一化到原始范围
 train_temp = sc.inverse_transform(pred_train)
 # 画出真实数据和预测数据的对比曲线
-train_time = real_time[60: 3500]
+train_time = real_time[time_step: 3500]
 plt.plot(train_time, train_temp, color='blue', label='40M Train Temperature')
 
 # 对测试数据进行绘图
@@ -157,7 +161,7 @@ pred_test = pred_test.data.cpu().numpy()[:, -1, 0].reshape(-1, 1)
 # 对测试数据还原---从（0，1）反归一化到原始范围
 test_temp = sc.inverse_transform(pred_test)
 # 画出真实数据和预测数据的对比曲线
-test_time = real_time[3560:]
+test_time = real_time[3500 + time_step:]
 plt.plot(test_time, test_temp, color='green', label='40M Test Temperature')
 
 # 对未来一年进行预测
@@ -169,11 +173,11 @@ for i in range(367):
         _time = datetime.datetime(_time.year + 1, 4, 1, 0, 0, 0)
     else:
         _time += datetime.timedelta(hours=12)
-    var_predict = Variable(torch.FloatTensor(predict_data[-60:]).view(1, 60, 1)).cuda()
+    var_predict = Variable(torch.FloatTensor(predict_data[-time_step:]).view(-1, time_step, n_feature)).cuda()
     pred_predict = model(var_predict)
     predict_data.append(pred_predict.data.cpu().numpy()[0, -1, 0])
     predict_time.append(_time)
-predict_temp = sc.inverse_transform(np.array(predict_data[-367:]).reshape(-1,1))
+predict_temp = sc.inverse_transform(np.array(predict_data[-367:]).reshape(-1, 1))
 plt.plot(predict_time, predict_temp, color='orange', label='40M Predict Temperature')
 
 
@@ -186,7 +190,7 @@ plt.show()
 '''evaluate'''
 
 # calculate MSE 均方误差 ---> E[(预测值-真实值)^2] (预测值减真实值求平方后求均值)
-real_temp = real_data[3560:, 0:1]
+real_temp = real_data[3500 + time_step:, 0:1]
 mse = mean_squared_error(test_temp, real_temp)
 # calculate RMSE 均方根误差--->sqrt[MSE]    (对均方误差开方)
 rmse = sqrt(mean_squared_error(test_temp, real_temp))

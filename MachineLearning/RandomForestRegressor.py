@@ -38,7 +38,7 @@ plt.scatter(x, y, color='darkorange', label='data')
 plt.hold('on')
 
 plt.plot(x, y_rf1, color='b', label='DecisionTreeRegressor')
-plt.plot(x, y_rf2, color='g', label='RandomForestRegressor')
+plt.plot(x, y_rf2, color='g', label='RandomForestRegressor.py')
 plt.plot(x, y_rf3, color='r', label='ExtraTreesRegressor')
 
 plt.xlabel('data_x')

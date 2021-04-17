@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import torch.utils.data as Data
 
-EPOCH = 3
-BATCH_SIZE = 50
+EPOCH = 50
+BATCH_SIZE = 128
 LR = 0.001
 DOWNLOAD_MINIST = False
 
@@ -44,7 +44,7 @@ class CNN(nn.Module):
             nn.Conv2d(
                 in_channels=1,
                 out_channels=16,
-                kernel_size=3,
+                kernel_size=(3, 3),
                 stride=1,
                 padding=1
             ),
@@ -77,7 +77,7 @@ print(cnn)
 optimizer = torch.optim.Adam(cnn.parameters(), lr=LR, )
 loss_func = nn.CrossEntropyLoss()
 
-for epoch in range(EPOCH):
+for e in range(EPOCH):
     for step, (b_x, b_y) in enumerate(train_loader):
         # b_x = x
         # b_y = y
@@ -94,9 +94,9 @@ for epoch in range(EPOCH):
             # test_output, last_layer = cnn(test_x)
             pred_y = torch.max(test_output, 1)[1].data.numpy()
             accuracy = float((pred_y == test_y.data.numpy()).astype(int).sum()) / float(test_y.size(0))
-            print('Epoch: ', epoch, '| train loss: %.4f' % loss.data.numpy(), '| test accuracy: %.2f' % accuracy)
+            print('Epoch: ', e, '| train loss: %.4f' % loss.data.numpy(), '| test accuracy: %.2f' % accuracy)
 
-torch.save(cnn,'cnn_minist.pkl')
+torch.save(cnn, 'cnn_minist.pkl')
 print('finish training')
 
 print('load cnn model')

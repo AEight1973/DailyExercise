@@ -1,5 +1,5 @@
 from matplotlib import pyplot as plt
-from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler
 from math import sqrt
 from torch.utils.data import TensorDataset, DataLoader
 from LoadData import *

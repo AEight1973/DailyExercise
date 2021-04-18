@@ -4,9 +4,7 @@ import warnings
 import numpy as np
 from sklearn.model_selection import cross_val_score
 from sklearn.datasets import make_blobs
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.tree import DecisionTreeClassifier
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
@@ -14,10 +12,8 @@ n_features = 2  # 每个样本有几个属性或特征
 x, y = make_blobs(n_samples=300, n_features=n_features, centers=6)
 x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=1, train_size=0.7)
 
-
-
 clf = ExtraTreesClassifier(n_estimators=10, max_features=math.sqrt(n_features), max_depth=None, min_samples_split=2,
-                            bootstrap=False)
+                           bootstrap=False)
 
 clf.fit(x_train, y_train)
 

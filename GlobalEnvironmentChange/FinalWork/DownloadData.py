@@ -3,6 +3,7 @@ from siphon.simplewebservice.wyoming import WyomingUpperAir
 import os
 import pandas as pd
 from tqdm import tqdm
+from RecordFailure import record_download
 
 start = datetime.datetime(2008, 1, 1, 0)
 end = datetime.datetime(2020, 12, 31, 12)
@@ -35,12 +36,14 @@ for station in stationlist[station_range_start: station_range_start + station_ra
             # 如文件已存在，则已下载
             filepath = dirs + '/' + station + '_' + date.strftime('%Y%m%d%H') + '.csv'
             if os.path.exists(filepath):
-                print(date.strftime('%Y%m%d_%H') + '已下载')
+                # print(date.strftime('%Y%m%d_%H') + '已下载')
                 continue
             else:
                 df = WyomingUpperAir.request_data(date, station)
                 df.to_csv(filepath, index=False)
-            print(date.strftime('%Y%m%d_%H') + '下载成功')
+            record_download(int(station), date, message=True)
+            # print(date.strftime('%Y%m%d_%H') + '下载成功')
         except:
-            print(date.strftime('%Y%m%d_%H') + '下载失败')
+            record_download(int(station), date)
+            # print(date.strftime('%Y%m%d_%H') + '下载失败')
             pass

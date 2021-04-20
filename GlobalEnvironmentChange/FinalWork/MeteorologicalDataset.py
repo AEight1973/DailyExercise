@@ -7,7 +7,7 @@ from metpy.units import units
 import metpy
 
 col_names = ['pressure', 'height', 'temperature', 'dewpoint', 'direction', 'speed']
-df = pd.read_csv("data/58362_2009040100.csv", encoding='gbk')
+df = pd.read_csv("data/58362/58362_2009040100.csv", encoding='gbk')
 df = df[col_names]
 df = df.dropna(axis=0, how='any')
 

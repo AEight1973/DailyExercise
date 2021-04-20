@@ -17,12 +17,16 @@ stationlist = list(stationfile['区站号'])
 
 # 批量下载
 for station in stationlist:
+    station = str(station)
     for date in datelist:
         try:
             df = WyomingUpperAir.request_data(date, station)
-            if not os.path.exists('data/' + station):
-                os.makedirs('data/'+station)
-            df.to_csv('data/' + station + '/' + station + '_' + date.strftime('%Y%m%d%H') + '.csv', index=False)
+            dirs = 'data/' + station
+            filepath = dirs + '/' + station + '_' + date.strftime('%Y%m%d%H') + '.csv'
+            if not os.path.exists(dirs):
+                os.makedirs(dirs)
+            if not os.path.exists(filepath):
+                df.to_csv(filepath, index=False)
             print(date.strftime('%Y%m%d_%H') + '下载成功')
         except:
             print(date.strftime('%Y%m%d_%H') + '下载失败')

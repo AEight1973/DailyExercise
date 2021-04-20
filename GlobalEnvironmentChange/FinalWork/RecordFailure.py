@@ -1,23 +1,33 @@
 import pandas as pd
+import datetime
+import json
+import os
 
 
 def record_download(station, time, message=False):
-    download = pd.read_csv('cache/download.csv')
-    if message:
-        download.loc[station, time] = -1
+    filepath = 'data/' + station + '/download.json'
+    if os.path.exists(filepath):
+        _download = json.load(filepath)
     else:
-        download.loc[station, time] += 1
+        _download = dict()
+    if message:
+        _download[time] = -1
+    else:
+        try:
+            _download[time] += 1
+        except KeyError:
+            _download[time] = 1
+    json.dump(_download, filepath)
 
 
 if __name__ == '__main__':
     import numpy
-    import datetime
 
     start = datetime.datetime(2008, 1, 1, 0)
     end = datetime.datetime(2020, 12, 31, 12)
     datelist = []
     while start <= end:
-        datelist.append(start)
+        datelist.append(start.strftime('%Y%m%d%H'))
         start += datetime.timedelta(hours=12)
 
     stationfile = pd.read_excel('UPAR_GLB_MUL_FTM_STATION.xlsx')

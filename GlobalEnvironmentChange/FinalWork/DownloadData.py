@@ -16,9 +16,12 @@ stationfile = pd.read_excel('UPAR_GLB_MUL_FTM_STATION.xlsx')
 stationlist = list(stationfile['区站号'])
 
 # 设置下载区间 (数据集共计817个站点数据 其中中国站点为 [164: 252])
+# 设置区间起始点 单点下载时间较长 每次下载20个站点
+station_range_start = 100
+station_range_step = 20
 
 # 批量下载
-for station in stationlist[160: 180]:
+for station in stationlist[station_range_start: station_range_start + station_range_step]:
     station = str(station)
     for date in datelist:
         try:

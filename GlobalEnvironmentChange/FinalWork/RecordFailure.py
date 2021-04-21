@@ -7,17 +7,19 @@ import os
 def record_download(station, time, message=False):
     filepath = 'data/' + station + '/download.json'
     if os.path.exists(filepath):
-        _download = json.load(filepath)
+        with open(filepath, 'r+') as f:
+            _download = json.load(f)
     else:
         _download = dict()
     if message:
-        _download[time] = -1
+        _download[time] = 0
     else:
         try:
             _download[time] += 1
         except KeyError:
             _download[time] = 1
-    json.dump(_download, filepath)
+    with open(filepath, 'w+') as f:
+        json.dump(_download, f)
 
 
 if __name__ == '__main__':

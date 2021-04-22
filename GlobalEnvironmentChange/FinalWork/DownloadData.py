@@ -19,13 +19,14 @@ stationlist = list(stationfile['区站号'])
 
 # 设置下载区间 (数据集共计817个站点数据 其中中国站点为 [164: 252])
 # 设置区间起始点 单点下载时间较长 每次下载20个站点
-station_range_start = 2
-station_range_step = 18
+station_range_start = 170
+station_range_step = 10
 print('下载范围: [{0} - {1})'.format(station_range_start, station_range_start + station_range_step))
 
 # 批量下载
 for station in stationlist[station_range_start: station_range_start + station_range_step]:
     station = str(station)
+    success = 0
     print('正在下载station:' + station)
     for date in tqdm(datelist):
         time = date.strftime('%Y%m%d%H')
@@ -38,15 +39,19 @@ for station in stationlist[station_range_start: station_range_start + station_ra
             # 如文件已存在，则已下载
             filepath = dirs + '/' + station + '_' + time + '.csv'
             if os.path.exists(filepath):
+                success += 1
                 # print(date.strftime('%Y%m%d_%H') + '已下载')
                 record_download(station, time, message=True)
                 continue
             else:
                 df = WyomingUpperAir.request_data(date, station)
                 df.to_csv(filepath, index=False)
+            df = WyomingUpperAir.request_data(date, station)
+            success += 1
             record_download(station, time, message=True)
-            # print(date.strftime('%Y%m%d_%H') + '下载成功')
+            print(date.strftime('%Y%m%d_%H') + '下载成功')
         except:
             record_download(station, time)
-            # print(date.strftime('%Y%m%d_%H') + '下载失败')
+            print(date.strftime('%Y%m%d_%H') + '下载失败')
             pass
+    print('下载完成，成功率为{}'.format(success / 9498))

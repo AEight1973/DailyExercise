@@ -21,19 +21,19 @@ def record_download(station, time, message=False):
     with open(filepath, 'w+') as f:
         json.dump(_download, f)
 
+def record_journal(station):
+    # 追加记录
+    with open('data/' + station + '/download.json', 'r+') as f:
+        _download = json.load(f)
+    per = len([i for i in list(_download.values()) if i == 0]) / 9484
+    with open('cache/record.txt', 'a+') as f:
+        text = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '\t' + station + '\t' + str(per) + '\n'
+        f.write(text)
 
-if __name__ == '__main__':
-    import numpy
 
-    start = datetime.datetime(2008, 1, 1, 0)
-    end = datetime.datetime(2020, 12, 31, 12)
-    datelist = []
-    while start <= end:
-        datelist.append(start.strftime('%Y%m%d%H'))
-        start += datetime.timedelta(hours=12)
 
-    stationfile = pd.read_excel('UPAR_GLB_MUL_FTM_STATION.xlsx')
-    stationlist = list(stationfile['区站号'])
+# if __name__ == '__main__':
+#     # 初始化record文件
+#     with open('cache/record.txt', 'w+') as f:
 
-    download = pd.DataFrame(numpy.zeros((len(stationlist), len(datelist)), int), columns=datelist, index=stationlist)
-    download.to_csv('cache/download.csv')
+

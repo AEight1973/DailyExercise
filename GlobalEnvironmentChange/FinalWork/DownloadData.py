@@ -4,6 +4,8 @@ import os
 import pandas as pd
 from tqdm import tqdm
 from RecordFailure import record_download
+import json
+from time import sleep
 
 
 def download():
@@ -21,8 +23,8 @@ def download():
 
     # 设置下载区间 (数据集共计817个站点数据 其中中国站点为 [164: 252])
     # 设置区间起始点 单点下载时间较长 每次下载20个站点
-    station_range_start = 2
-    station_range_step = 18
+    station_range_start = 184
+    station_range_step = 8
     print('下载范围: [{0} - {1})'.format(station_range_start, station_range_start + station_range_step))
 
     # 批量下载
@@ -55,23 +57,32 @@ def download():
 
 
 def test():
-    start = datetime.datetime(2010, 1, 1, 0)
-    end = datetime.datetime(2010, 1, 31, 12)
-
-    datelist = []
-    while start <= end:
-        datelist.append(start)
-        start += datetime.timedelta(hours=12)
-
-    # 批量下载
+    # time = datetime.datetime(2010, 1, 1, 0)
+    # station = '58362'
+    # while True:
+    #     try:
+    #         WyomingUpperAir.request_data(time, station)
+    #         print(datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '下载正常')
+    #     except:
+    #         print(datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + 'IP被限制，请尽快处理')
+    #         break
+    #     sleep(1800)
+    time = [datetime.datetime(2010, 1, i, 0) for i in range(1, 4)]
     station = '58362'
-    for date in datelist:
-        try:
-            WyomingUpperAir.request_data(date, station)
-            print(date.strftime('%Y%m%d_%H') + '下载成功')
-        except:
-            print(date.strftime('%Y%m%d_%H') + '下载失败')
-            pass
+    while True:
+        _fail = 0
+        for t in time:
+            try:
+                WyomingUpperAir.request_data(t, station)
+                print(datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '下载正常')
+                break
+            except:
+                _fail += 1
+        if _fail == 3:
+            print(datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + 'IP被限制，请尽快处理')
+            break
+        else:
+            sleep(1800)
 
 
 def refresh():
@@ -89,8 +100,8 @@ def refresh():
 
     # 设置下载区间 (数据集共计817个站点数据 其中中国站点为 [164: 252])
     # 设置区间起始点 单点下载时间较长 每次下载20个站点
-    station_range_start = 2
-    station_range_step = 18
+    station_range_start = 231
+    station_range_step = 9
     print('下载范围: [{0} - {1})'.format(station_range_start, station_range_start + station_range_step))
 
     # 批量下载

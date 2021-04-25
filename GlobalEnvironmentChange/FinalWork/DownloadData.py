@@ -23,8 +23,8 @@ def download():
 
     # 设置下载区间 (数据集共计817个站点数据 其中中国站点为 [164: 252])
     # 设置区间起始点 单点下载时间较长 每次下载20个站点
-    station_range_start = 184
-    station_range_step = 8
+    station_range_start = 249
+    station_range_step = 2
     print('下载范围: [{0} - {1})'.format(station_range_start, station_range_start + station_range_step))
 
     # 批量下载
@@ -100,7 +100,7 @@ def refresh():
 
     # 设置下载区间 (数据集共计817个站点数据 其中中国站点为 [164: 252])
     # 设置区间起始点 单点下载时间较长 每次下载20个站点
-    station_range_start = 231
+    station_range_start = 249
     station_range_step = 9
     print('下载范围: [{0} - {1})'.format(station_range_start, station_range_start + station_range_step))
 

@@ -10,7 +10,7 @@ from time import sleep
 
 def download():
     start = datetime.datetime(2008, 1, 1, 0)
-    end = datetime.datetime(2020, 12, 31, 12)
+    end = datetime.datetime(2019, 12, 31, 12)
 
     datelist = []
     while start <= end:
@@ -23,8 +23,8 @@ def download():
 
     # 设置下载区间 (数据集共计817个站点数据 其中中国站点为 [164: 252])
     # 设置区间起始点 单点下载时间较长 每次下载20个站点
-    station_range_start = 249
-    station_range_step = 2
+    station_range_start = 219
+    station_range_step = 1
     print('下载范围: [{0} - {1})'.format(station_range_start, station_range_start + station_range_step))
 
     # 批量下载
@@ -100,8 +100,8 @@ def refresh():
 
     # 设置下载区间 (数据集共计817个站点数据 其中中国站点为 [164: 252])
     # 设置区间起始点 单点下载时间较长 每次下载20个站点
-    station_range_start = 249
-    station_range_step = 9
+    station_range_start = 224
+    station_range_step = 29
     print('下载范围: [{0} - {1})'.format(station_range_start, station_range_start + station_range_step))
 
     # 批量下载
@@ -123,7 +123,7 @@ def refresh():
 
                 # 如文件已存在，则已下载
                 filepath = dirs + '/' + station + '_' + time + '.csv'
-                if os.path.exists(filepath) or _download[date] > 3:
+                if os.path.exists(filepath):
                     continue
                 else:
                     df = WyomingUpperAir.request_data(date, station)
@@ -140,6 +140,6 @@ if __name__ == '__main__':
     # 下载
     # download()
     # 测试
-    test()
+    # test()
     # 更新
-    # refresh()
+    refresh()

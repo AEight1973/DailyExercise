@@ -2,7 +2,7 @@ from osgeo import gdal
 
 
 # 读图像文件
-def read_img(self, filename):
+def read_img(filename):
     dataset = gdal.Open(filename)  # 打开文件
 
     im_width = dataset.RasterXSize  # 栅格矩阵的列数

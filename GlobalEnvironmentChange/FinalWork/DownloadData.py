@@ -23,7 +23,7 @@ def download():
 
     # 设置下载区间 (数据集共计817个站点数据 其中中国站点为 [164: 252])
     # 设置区间起始点 单点下载时间较长 每次下载20个站点
-    station_range_start = 219
+    station_range_start = 172
     station_range_step = 1
     print('下载范围: [{0} - {1})'.format(station_range_start, station_range_start + station_range_step))
 
@@ -67,7 +67,7 @@ def test():
     #         print(datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + 'IP被限制，请尽快处理')
     #         break
     #     sleep(1800)
-    time = [datetime.datetime(2010, 1, i, 0) for i in range(1, 4)]
+    time = [datetime.datetime(2010, 1, i, 0) for i in range(1, 6)]
     station = '58362'
     while True:
         _fail = 0
@@ -100,8 +100,8 @@ def refresh():
 
     # 设置下载区间 (数据集共计817个站点数据 其中中国站点为 [164: 252])
     # 设置区间起始点 单点下载时间较长 每次下载20个站点
-    station_range_start = 224
-    station_range_step = 29
+    station_range_start = 230
+    station_range_step = 4
     print('下载范围: [{0} - {1})'.format(station_range_start, station_range_start + station_range_step))
 
     # 批量下载

@@ -1,8 +1,8 @@
 from sklearn.cluster import estimate_bandwidth, MeanShift
 from GDALTools import *
 import numpy as np
-import sklearn
 import os
+import matplotlib.pyplot as plt
 
 
 class RSImage:
@@ -20,6 +20,7 @@ class RSImage:
         for i in _file:
             info = i[: -4].split('_')[-1]
             im_proj, im_geotrans, im_width, im_height, _output[info] = read_img(self.path + '/' + i)
+            print('{}读取完成'.format(i))
         # TODO 优化数据的读入
         self.proj = im_proj
         self.geotrans = im_geotrans
@@ -30,20 +31,18 @@ class RSImage:
         _img = np.array((self.band[_red],
                          self.band[_green],
                          self.band[_blue]))
-        return _img
+        return _img.transpose((1, 2, 0))
 
 
 # TODO 理解meanshift代码，并改写
 def meanshift(im_data):
-    im_data = im_data[0:3, ...]
-    im_data = im_data.transpose((2, 1, 0))
     im_temp = im_data.reshape((-1, 3))
     im_temp = np.float32(im_temp)
     bandwidth = estimate_bandwidth(im_temp, quantile=0.2, n_samples=500)
     ms = MeanShift(bandwidth=bandwidth, bin_seeding=True, cluster_all=True)
     ms.fit_predict(im_temp)
     labels = ms.labels_
-    cluster_centers = ms.cluster_centers_
+    # cluster_centers = ms.cluster_centers_
     seg = labels.reshape((im_data.shape[0], im_data.shape[1]))
     seg = seg.transpose(1, 0)
     return seg
@@ -62,17 +61,21 @@ if __name__ == '__main__':
     # 波段合成
     img_com = img.band_composite(_red='B3', _green='B2', _blue='B1')
 
+    print('数据已全部读取完成')
+
     '''
     数据处理
     方法：遥感图像分割 MeanShift
     '''
     img_trained = meanshift(img_com)
 
-    # TODO 遥感图像分割的展示
+    # 遥感图像分割的展示
+    plt.imshow(img_trained)
+    plt.show()
 
-    # TODO 遥感图像分割的保存
-    # seg_path = 'E:/xx/test/sb_test1_seg.tif'
-    # write_img(seg_path, im_proj, im_geotrans, seg)
+    # 遥感图像分割的保存
+    seg_path = 'result/picture.TIFF'
+    write_img(seg_path, img.proj, img.geotrans, img_trained)
 
     # TODO 不同参数下遥感图像分割的效果展示
 

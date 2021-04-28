@@ -46,8 +46,6 @@ def meanshift(im_data):
     cluster_centers = ms.cluster_centers_
     seg = labels.reshape((im_data.shape[0], im_data.shape[1]))
     seg = seg.transpose(1, 0)
-    seg_path = 'E:/xx/test/sb_test1_seg.tif'
-    write_img(seg_path, im_proj, im_geotrans, seg)
     return seg
 
 
@@ -55,6 +53,7 @@ if __name__ == '__main__':
     '''
     数据集
     数据源：Landsat 8 OLI/TIRS 遥感数据
+    数据名称：LC08_L2SP_126058_20200824_20200905_02_T1
     数据介绍：马六甲皇京港 (行 126 列 058)
     数据预处理：波段合成(321)
     '''
@@ -72,6 +71,8 @@ if __name__ == '__main__':
     # TODO 遥感图像分割的展示
 
     # TODO 遥感图像分割的保存
+    # seg_path = 'E:/xx/test/sb_test1_seg.tif'
+    # write_img(seg_path, im_proj, im_geotrans, seg)
 
     # TODO 不同参数下遥感图像分割的效果展示
 

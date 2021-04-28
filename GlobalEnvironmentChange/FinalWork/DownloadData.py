@@ -140,6 +140,6 @@ if __name__ == '__main__':
     # 下载
     # download()
     # 测试
-    # test()
+    test()
     # 更新
-    refresh()
+    # refresh()

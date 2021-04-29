@@ -122,13 +122,6 @@ def time_gru(dataset, epoch=50, time_step=14,):
         Loss.append(loss / len(train_dl))
         Valid_Loss.append(valid_loss / len(valid_dl))
 
-    plt.plot(Loss, color='red', label='loss')
-    plt.plot(Valid_Loss, color='blue', label='valid_loss')
-    plt.title('Model Training')
-    plt.xlabel('epoch')
-    plt.ylabel('value')
-    plt.legend()
-    plt.show()
 
     '''save'''
 
@@ -136,35 +129,7 @@ def time_gru(dataset, epoch=50, time_step=14,):
     torch.save(model, PATH)
 
     '''predict'''
-    # 测试集输入模型进行预测
     model = model.eval()  # 转换成测试模式
-
-    # 对真实数据进行绘图
-    real_data = dataset.values
-    real_time = dataset.index
-    plt.plot(real_time, real_data, color='red', label='40M Real Temperature')
-
-    # 对训练数据进行绘图
-    var_train = Variable(x_train).cuda()
-    pred_train = model(var_train)
-    # 改变输出的格式
-    pred_train = pred_train.data.cpu().numpy()[:, -1, 0].reshape(-1, 1)
-    # 对训练数据还原---从（0，1）反归一化到原始范围
-    train_temp = sc.inverse_transform(pred_train)
-    # 画出真实数据和预测数据的对比曲线
-    train_time = real_time[time_step: 3500]
-    plt.plot(train_time, train_temp, color='blue', label='40M Train Temperature')
-
-    # 对测试数据进行绘图
-    var_test = Variable(x_test).cuda()
-    pred_test = model(var_test)
-    # 改变输出的格式
-    pred_test = pred_test.data.cpu().numpy()[:, -1, 0].reshape(-1, 1)
-    # 对测试数据还原---从（0，1）反归一化到原始范围
-    test_temp = sc.inverse_transform(pred_test)
-    # 画出真实数据和预测数据的对比曲线
-    test_time = real_time[3500 + time_step:]
-    plt.plot(test_time, test_temp, color='green', label='40M Test Temperature')
 
     # 对未来一年进行预测
     predict_time = []
@@ -187,17 +152,3 @@ def time_gru(dataset, epoch=50, time_step=14,):
     plt.ylabel('Temperature')
     plt.legend()
     plt.show()
-
-    '''evaluate'''
-
-    # calculate MSE 均方误差 ---> E[(预测值-真实值)^2] (预测值减真实值求平方后求均值)
-    real_temp = real_data[3500 + time_step:, 0:1]
-    mse = mean_squared_error(test_temp, real_temp)
-    # calculate RMSE 均方根误差--->sqrt[MSE]    (对均方误差开方)
-    rmse = sqrt(mean_squared_error(test_temp, real_temp))
-    # calculate MAE 平均绝对误差----->E[|预测值-真实值|](预测值减真实值求绝对值后求均值）
-    mae = mean_absolute_error(test_temp, real_temp)
-    print('均方误差: %.6f' % mse)
-    print('均方根误差: %.6f' % rmse)
-    print('平均绝对误差: %.6f' % mae)
-

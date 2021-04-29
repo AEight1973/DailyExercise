@@ -13,8 +13,9 @@ def read_img(filename):
     im_proj = dataset.GetProjection()  # 地图投影信息，字符串表示
     im_data = dataset.ReadAsArray(0, 0, im_width, im_height)
 
-    # 对栅格进行归一化
-    im_data = scaled(im_data)
+    # 简化流程，截取其中500 * 500 区域
+    im_width = im_height = 500
+    im_data = im_data[5900: 6400, 700: 1200]
 
     del dataset  # 关闭对象dataset，释放内存
 
@@ -55,17 +56,19 @@ def write_img(filename, im_proj, im_geotrans, im_data):
     del dataset
 
 
+# TODO 效率待优化
 def scaled(img):
     img_1d = list(img.reshape(-1))
     img_1d.sort()
-    _min = img_1d[int(0.01 * len(img_1d))]
+    _zero = img_1d.count(0)
+    _min = img_1d[int(0.01 * len(img_1d)) + _zero]
     _max = img_1d[int(0.99 * len(img_1d))]
     for i in range(img.shape[0]):
         for j in range(img.shape[1]):
             if img[i, j] <= _min:
                 img[i, j] = 0
             elif img[i, j] >= _max:
-                img[i, j] = 1
+                img[i, j] = 255
             else:
-                img[i, j] = (img[i, j] - _min) / (_max - _min)
+                img[i, j] = 255 * (img[i, j] - _min) / (_max - _min)
     return img

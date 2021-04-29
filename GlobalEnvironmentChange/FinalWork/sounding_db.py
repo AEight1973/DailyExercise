@@ -1,14 +1,14 @@
-from sqlalchemy import Column, Float, Integer, Text, create_engine
-from sqlalchemy.dialects.mysql import TINYTEXT
+import pandas as pd
+from sqlalchemy import Column, Integer, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
-import pandas as pd
 
 
 def csv2db(_path):
     _, dbname, tablename = _path.split('/')
-    con_engine = create_engine('mysql+pymysql://root:GISChaser521_p@ssw0rd@localhost:3306/{}'.format('sounding' + dbname))
+    con_engine = create_engine(
+        'mysql+pymysql://root:GISChaser521_p@ssw0rd@localhost:3306/{}'.format('sounding' + dbname))
 
     # 若不存在，则新建数据库
     if not database_exists(con_engine.url):
@@ -35,33 +35,16 @@ def csv2db(_path):
         def to_dict(self):
             return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
-
-def create(_name, _content, _tag):
-    return Comments(name=_name,
-                    content=_content,
-                    tag=_tag)
-
-
-def get(_name=None):
-    # 创建Query查询，filter是where条件，最后调用one()返回唯一行，
-    if _name is None:
-        _data = session.query(Comments).all()
-    else:
-        _data = session.query(Comments).filter_by(name=_name).all()
-    return _data
-
-
-def insert(_name, _content, _req):
+    data = pd.read_csv(_path)
     metadata.create_all(con_engine)
-    session.add(create(_name, _content, ReqToText(_req)))
-    session.commit()
-    return {'code': '201000', 'message': '入库成功'}
 
-
-if __name__ == '__main__':
-    with open("../data/backup/comment.txt", 'r') as f:
-        data = eval(f.read())
-    metadata.create_all(con_engine)
-    for i in data:
-        session.add(create(i['name'], i['content'], i['tag']))
+    for i in range(len(data)):
+        session.add(Record(pressure=data.iloc[i, 0],
+                           height=data.iloc[i, 1],
+                           temperature=data.iloc[i, 2],
+                           dewpoint=data.iloc[i, 3],
+                           direction=data.iloc[i, 4],
+                           speed=data.iloc[i, 5],
+                           u_wind=data.iloc[i, 6],
+                           v_wind=data.iloc[i, 7]))
         session.commit()

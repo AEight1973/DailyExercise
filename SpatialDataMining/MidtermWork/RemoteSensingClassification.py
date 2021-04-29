@@ -42,7 +42,7 @@ def meanshift(im_data):
     labels = ms.labels_
     # cluster_centers = ms.cluster_centers_
     seg = labels.reshape((im_data.shape[0], im_data.shape[1]))
-    return seg
+    return seg, labels
 
 
 if __name__ == '__main__':
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     数据处理
     方法：遥感图像分割 MeanShift
     '''
-    img_trained = meanshift(img_com)
+    img_trained, labels = meanshift(img_com)
     print('遥感图像分割结束')
 
     # 遥感图像分割的展示
@@ -88,8 +88,8 @@ if __name__ == '__main__':
     seg_path1 = 'result/432.TIFF'
     seg_path2 = 'result/543.TIFF'
     seg_path3 = 'result/result.TIFF'
-    write_img(seg_path1, img.proj, img.geotrans, img_real)
-    write_img(seg_path2, img.proj, img.geotrans, img_com)
+    write_img(seg_path1, img.proj, img.geotrans, img_real.transpose((2, 0, 1)))
+    write_img(seg_path2, img.proj, img.geotrans, img_com.transpose((2, 0, 1)))
     write_img(seg_path3, img.proj, img.geotrans, img_trained)
 
     # TODO 不同参数下遥感图像分割的效果展示

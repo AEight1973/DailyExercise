@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 from sqlalchemy import Column, Integer, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -8,7 +10,7 @@ from sqlalchemy_utils import database_exists, create_database
 def csv2db(_path):
     _, dbname, tablename = _path.split('/')
     con_engine = create_engine(
-        'mysql+pymysql://root:GISChaser521_p@ssw0rd@localhost:3306/{}'.format('sounding' + dbname))
+        'mysql+pymysql://root:AEight19731224@localhost:3306/{}'.format('sounding_' + dbname))
 
     # 若不存在，则新建数据库
     if not database_exists(con_engine.url):
@@ -19,8 +21,9 @@ def csv2db(_path):
     DBSession = sessionmaker(bind=con_engine)
     session = DBSession()
 
+
     class Record(Base):
-        __tablename__ = 'Record' + tablename
+        __tablename__ = 'record_' + tablename.split('_')[1][:-4]
 
         id = Column(Integer, primary_key=True, autoincrement=True)
         height = Column(Integer)
@@ -36,15 +39,58 @@ def csv2db(_path):
             return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
     data = pd.read_csv(_path)
+    data_nan = data.notnull()
     metadata.create_all(con_engine)
 
     for i in range(len(data)):
-        session.add(Record(pressure=data.iloc[i, 0],
-                           height=data.iloc[i, 1],
-                           temperature=data.iloc[i, 2],
-                           dewpoint=data.iloc[i, 3],
-                           direction=data.iloc[i, 4],
-                           speed=data.iloc[i, 5],
-                           u_wind=data.iloc[i, 6],
-                           v_wind=data.iloc[i, 7]))
-        session.commit()
+        session.add(Record(pressure=data.iloc[i, 0] if data_nan.iloc[i, 0] else None,
+                           height=data.iloc[i, 1] if data_nan.iloc[i, 1] else None,
+                           temperature=data.iloc[i, 2] if data_nan.iloc[i, 2] else None,
+                           dewpoint=data.iloc[i, 3] if data_nan.iloc[i, 3] else None,
+                           direction=data.iloc[i, 4] if data_nan.iloc[i, 4] else None,
+                           speed=data.iloc[i, 5] if data_nan.iloc[i, 5] else None,
+                           u_wind=data.iloc[i, 6] if data_nan.iloc[i, 6] else None,
+                           v_wind=data.iloc[i, 7] if data_nan.iloc[i, 7] else None))
+    session.commit()
+    session.close()
+
+
+def read(_station, _record):
+    con_engine = create_engine(
+        'mysql+pymysql://root:AEight19731224@localhost:3306/{}'.format('sounding_' + _station))
+
+    Base = declarative_base()
+    metadata = Base.metadata
+    DBSession = sessionmaker(bind=con_engine)
+    session = DBSession()
+
+    class Record(Base):
+        __tablename__ = 'record_' + _record
+
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        height = Column(Integer)
+        pressure = Column(Integer)
+        temperature = Column(Integer)
+        dewpoint = Column(Integer)
+        direction = Column(Integer)
+        speed = Column(Integer)
+        u_wind = Column(Integer)
+        v_wind = Column(Integer)
+
+        def to_dict(self):
+            return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+    return [ven.to_dict() for ven in session.query(Record).all()]
+
+
+if __name__ == '__main__':
+    from datetime import datetime
+    stationlist = os.listdir('data')
+    for station in stationlist:
+        print('{0} 开始写入{1}数据库'.format(datetime.now().isoformat(), 'sounding_'+station))
+        recordlist = os.listdir('data/' + station)
+        recordlist.remove('download.json')
+        for record in recordlist:
+            csv2db('data/' + station + '/' + record)
+            print('--> {0} 成功写入表{1}'.format(datetime.now().isoformat(), 'record_' + record[:-4]))
+        print('{0} 成功写入{1}数据库'.format(datetime.now().isoformat(), 'sounding_' + station))

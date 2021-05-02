@@ -1,13 +1,13 @@
 import os
-
+import numpy as np
 import pandas as pd
-from sqlalchemy import Column, Integer, create_engine
+from sqlalchemy import Column, Integer, create_engine, DECIMAL, SmallInteger,Float,FLOAT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
 
 
-def csv2db(_path):
+def csv2db(_path, session=None):
     _, dbname, tablename = _path.split('/')
     con_engine = create_engine(
         'mysql+pymysql://root:AEight19731224@localhost:3306/{}'.format('sounding_' + dbname))
@@ -25,18 +25,14 @@ def csv2db(_path):
     class Record(Base):
         __tablename__ = 'record_' + tablename.split('_')[1][:-4]
 
-        id = Column(Integer, primary_key=True, autoincrement=True)
+        id = Column(SmallInteger, primary_key=True, autoincrement=True)
         height = Column(Integer)
-        pressure = Column(Integer)
-        temperature = Column(Integer)
-        dewpoint = Column(Integer)
-        direction = Column(Integer)
-        speed = Column(Integer)
-        u_wind = Column(Integer)
-        v_wind = Column(Integer)
+        pressure = Column(Float)
+        temperature = Column(Float)
+        dewpoint = Column(Float)
+        direction = Column(Float)
+        speed = Column(Float)
 
-        def to_dict(self):
-            return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
     data = pd.read_csv(_path)
     data_nan = data.notnull()
@@ -48,9 +44,7 @@ def csv2db(_path):
                            temperature=data.iloc[i, 2] if data_nan.iloc[i, 2] else None,
                            dewpoint=data.iloc[i, 3] if data_nan.iloc[i, 3] else None,
                            direction=data.iloc[i, 4] if data_nan.iloc[i, 4] else None,
-                           speed=data.iloc[i, 5] if data_nan.iloc[i, 5] else None,
-                           u_wind=data.iloc[i, 6] if data_nan.iloc[i, 6] else None,
-                           v_wind=data.iloc[i, 7] if data_nan.iloc[i, 7] else None))
+                           speed=data.iloc[i, 5] if data_nan.iloc[i, 5] else None))
     session.commit()
     session.close()
 
@@ -67,15 +61,13 @@ def read(_station, _record):
     class Record(Base):
         __tablename__ = 'record_' + _record
 
-        id = Column(Integer, primary_key=True, autoincrement=True)
+        id = Column(SmallInteger, primary_key=True, autoincrement=True)
         height = Column(Integer)
-        pressure = Column(Integer)
-        temperature = Column(Integer)
-        dewpoint = Column(Integer)
-        direction = Column(Integer)
-        speed = Column(Integer)
-        u_wind = Column(Integer)
-        v_wind = Column(Integer)
+        pressure = Column(Float)
+        temperature = Column(Float)
+        dewpoint = Column(Float)
+        direction = Column(Float)
+        speed = Column(Float)
 
         def to_dict(self):
             return {c.name: getattr(self, c.name) for c in self.__table__.columns}

@@ -78,10 +78,11 @@ def read(_station, _record):
 if __name__ == '__main__':
     from datetime import datetime
     stationlist = os.listdir('data')
-    for station in stationlist:
+    for station in stationlist[167:]:
         print('{0} 开始写入{1}数据库'.format(datetime.now().isoformat(), 'sounding_'+station))
         recordlist = os.listdir('data/' + station)
-        recordlist.remove('download.json')
+        if os.path.exists('data/' + station  + '/download.json'):
+            recordlist.remove('download.json')
         for record in recordlist:
             csv2db('data/' + station + '/' + record)
             print('--> {0} 成功写入表{1}'.format(datetime.now().isoformat(), 'record_' + record[:-4]))

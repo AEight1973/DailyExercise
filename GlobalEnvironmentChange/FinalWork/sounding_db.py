@@ -77,7 +77,7 @@ def read(_station, _record):
 
 if __name__ == '__main__':
     from datetime import datetime
-    stationlist = os.listdir('data')
+    stationlist = os.listdir('cache/data')
     for station in stationlist[167:]:
         print('{0} 开始写入{1}数据库'.format(datetime.now().isoformat(), 'sounding_'+station))
         recordlist = os.listdir('data/' + station)

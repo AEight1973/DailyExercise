@@ -6,7 +6,7 @@ import json
 
 
 def dataset_integrity():
-    dirs = os.listdir('data')
+    dirs = os.listdir('cache/data')
     table = pd.read_excel('UPAR_GLB_MUL_FTM_STATION.xlsx')
 
     label, lon, lat, integrity = [], [], [], []

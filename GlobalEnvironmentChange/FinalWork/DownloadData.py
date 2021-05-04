@@ -112,12 +112,12 @@ def refresh():
             time = date.strftime('%Y%m%d%H')
             try:
                 # 新建文件夹
-                dirs = 'data/' + station
+                dirs = 'cache/data/' + station
                 if not os.path.exists(dirs):
                     os.makedirs(dirs)
 
                 #
-                download_path = 'data/' + station + '/download.json'
+                download_path = 'cache/data/' + station + '/download.json'
                 with open(download_path, 'r+') as f:
                     _download = json.load(f)
 

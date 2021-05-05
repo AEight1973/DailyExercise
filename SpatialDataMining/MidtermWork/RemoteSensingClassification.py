@@ -58,40 +58,47 @@ if __name__ == '__main__':
 
     # 波段合成
     img_real = img.band_composite(_red='B4', _green='B3', _blue='B2')
-
-    plt.imshow(img_real)
-    plt.axis('off')
-    plt.show()
-    print('数据已全部读取完成')
-
-    # 波段合成
+    #
+    # plt.imshow(img_real)
+    # plt.axis('off')
+    # plt.show()
+    # print('数据已全部读取完成')
+    #
+    # # 波段合成
     img_com = img.band_composite(_red='B5', _green='B4', _blue='B3')
-
-    plt.imshow(img_com)
-    plt.axis('off')
-    plt.show()
-    print('数据已全部读取完成')
-
-    '''
-    数据处理
-    方法：遥感图像分割 MeanShift
-    '''
-    img_trained, labels = meanshift(img_com)
-    print('遥感图像分割结束')
-
-    # 遥感图像分割的展示
-    plt.imshow(img_trained)
-    plt.axis('off')
-    plt.show()
-
-    # 遥感图像分割的保存
-    seg_path1 = 'result/432.TIFF'
-    seg_path2 = 'result/543.TIFF'
-    seg_path3 = 'result/result.TIFF'
-    write_img(seg_path1, img.proj, img.geotrans, img_real.transpose((2, 0, 1)))
-    write_img(seg_path2, img.proj, img.geotrans, img_com.transpose((2, 0, 1)))
-    write_img(seg_path3, img.proj, img.geotrans, img_trained)
-
-    # TODO 不同参数下遥感图像分割的效果展示
-
-    # TODO 继续完善
+    #
+    # plt.imshow(img_com)
+    # plt.axis('off')
+    # plt.show()
+    # print('数据已全部读取完成')
+    #
+    # '''
+    # 数据处理
+    # 方法：遥感图像分割 MeanShift
+    # '''
+    # img_trained, labels = meanshift(img_com)
+    # print('遥感图像分割结束')
+    #
+    # # 遥感图像分割的展示
+    # plt.imshow(img_trained)
+    # plt.axis('off')
+    # plt.show()
+    #
+    # # 遥感图像分割的保存
+    # seg_path1 = 'result/432.TIFF'
+    # seg_path2 = 'result/543.TIFF'
+    # seg_path3 = 'result/result.TIFF'
+    # write_img(seg_path1, img.proj, img.geotrans, img_real.transpose((2, 0, 1)))
+    # write_img(seg_path2, img.proj, img.geotrans, img_com)
+    # write_img(seg_path3, img.proj, img.geotrans, img_trained)
+    #
+    # # TODO 不同参数下遥感图像分割的效果展示
+    #
+    # # TODO 继续完善
+    _img = np.array((img.band['B1'], img.band['B2'], img.band['B3'], img.band['B4'],
+                     img.band['B5'], img.band['B6'], img.band['B7']))
+    seg_path = 'result/data.TIFF'
+    write_img(seg_path, img.proj, img.geotrans, _img)
+    _img = np.array((img.band['B5'], img.band['B4'], img.band['B3']))
+    seg_path = 'result/data_2.TIFF'
+    write_img(seg_path, img.proj, img.geotrans, _img)

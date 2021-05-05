@@ -21,6 +21,7 @@ def record_download(station, time, message=False):
     with open(filepath, 'w+') as f:
         json.dump(_download, f)
 
+
 def record_journal(station):
     # 追加记录
     with open('data/' + station + '/download.json', 'r+') as f:
@@ -30,10 +31,6 @@ def record_journal(station):
         text = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + '\t' + station + '\t' + str(per) + '\n'
         f.write(text)
 
-
-
 # if __name__ == '__main__':
 #     # 初始化record文件
 #     with open('cache/record.txt', 'w+') as f:
-
-

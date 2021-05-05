@@ -138,8 +138,11 @@ def refresh():
 
 if __name__ == '__main__':
     # 下载
+    # print('下载模式')
     # download()
     # 测试
+    print('测试模式')
     test()
     # 更新
+    # print('更新模式')
     # refresh()

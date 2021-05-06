@@ -5,6 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
 from MoveFile import movefile
+import sqlalchemy
 
 
 def csv2db(_path, session=None):
@@ -51,7 +52,7 @@ def csv2db(_path, session=None):
 
 def read(_station, _record, _mode='simple', _return='dataframe'):
     con_engine = create_engine(
-        'mysql+pymysql://root:AEight19731224@localhost:3306/{}'.format('sounding_' + _station))
+        'mysql+pymysql://root:AEight19731224@localhost:3306/{}'.format('sounding_' + str(_station)))
 
     Base = declarative_base()
     metadata = Base.metadata
@@ -59,7 +60,7 @@ def read(_station, _record, _mode='simple', _return='dataframe'):
     session = DBSession()
 
     class Record(Base):
-        __tablename__ = 'record_' + _record
+        __tablename__ = 'record_' + str(_record)
 
         id = Column(SmallInteger, primary_key=True, autoincrement=True)
         height = Column(Integer)
@@ -70,22 +71,48 @@ def read(_station, _record, _mode='simple', _return='dataframe'):
         speed = Column(Float)
 
         def to_dict(self):
-            return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+            return {c.name: getattr(self, c.name) for c in self.__table__.columns if c.name != 'id'}
 
     if _mode == 'simple':
         output = []
         pressures = [850, 700, 500, 300, 200]
         for p in pressures:
-            _data = session.query(Record).filter_by(pressure=p).one()
-            if _data:
-                output.append(_data.to_dict())
+            try:
+                _data = session.query(Record).filter_by(pressure=p).one()
+            except:
+                continue
+            output.append(_data.to_dict())
     else:
         output = [ven.to_dict() for ven in session.query(Record).all()]
 
-    if _return == 'dataframe':
-        return dict2pd(output)
+    if len(output) == 0:
+        return
     else:
-        return output
+        if _return == 'dataframe':
+            return dict2pd(output)
+        else:
+            return output
+
+
+def delete(_station, _record, _mode='move'):
+    con_engine = create_engine(
+        'mysql+pymysql://root:AEight19731224@localhost:3306/{}'.format('sounding_' + str(_station)))
+
+    Base = declarative_base()
+    metadata = Base.metadata
+    DBSession = sessionmaker(bind=con_engine)
+    session = DBSession()
+
+    class Record(Base):
+        __tablename__ = 'record_' + str(_record)
+
+        id = Column(SmallInteger, primary_key=True, autoincrement=True)
+        height = Column(Integer)
+        pressure = Column(Float)
+        temperature = Column(Float)
+        dewpoint = Column(Float)
+        direction = Column(Float)
+        speed = Column(Float)
 
 
 def dict2pd(_data):

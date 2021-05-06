@@ -151,41 +151,52 @@ def time_gru(_dataset, epoch=50, time_step=14, cuda_or_not=True):
         datelist.append(start)
         start += datetime.timedelta(hours=12)
 
-    for t in datelist:
+    # for t in datelist:
+    #
+    # predict_time = []
+    # predict_data = list(sc.transform(real_data).T[0])
+    # _time = real_time[-1]
+    # for i in range(367):
+    #     if _time.hour == 0 and _time.month == 10:
+    #         _time = datetime.datetime(_time.year + 1, 4, 1, 0, 0, 0)
+    #     else:
+    #         _time += datetime.timedelta(hours=12)
+    #     var_predict = Variable(torch.FloatTensor(predict_data[-time_step:]).view(-1, time_step, n_feature)).cuda()
+    #     pred_predict = model(var_predict)
+    #     predict_data.append(pred_predict.data.cpu().numpy()[0, -1, 0])
+    #     predict_time.append(_time)
+    # predict_temp = sc.inverse_transform(np.array(predict_data[-367:]).reshape(-1, 1))
+    # return predict_temp
 
-    predict_time = []
-    predict_data = list(sc.transform(real_data).T[0])
-    _time = real_time[-1]
-    for i in range(367):
-        if _time.hour == 0 and _time.month == 10:
-            _time = datetime.datetime(_time.year + 1, 4, 1, 0, 0, 0)
-        else:
-            _time += datetime.timedelta(hours=12)
-        var_predict = Variable(torch.FloatTensor(predict_data[-time_step:]).view(-1, time_step, n_feature)).cuda()
-        pred_predict = model(var_predict)
-        predict_data.append(pred_predict.data.cpu().numpy()[0, -1, 0])
-        predict_time.append(_time)
-    predict_temp = sc.inverse_transform(np.array(predict_data[-367:]).reshape(-1, 1))
-    return predict_temp
 
 if __name__ == '__main__':
     import pandas as pd
     import sounding_db as sd
     import json
     import os
+    import datetime
+    from tqdm import tqdm
+
     # 提取中国探空站ID
     stationlist = pd.read_excel('UPAR_GLB_MUL_FTM_STATION.xlsx')
     for i in list(stationlist.loc[164: 252, '区站号']):
+        print('开始插值站点' + str(i))
         dataset = []
         with open('cache/data/' + str(i) + '/download.json') as f:
             download = json.load(f)
         available = [i for i in list(download.keys()) if download[i] == 0]
-        for j in available:
-            dataset.append(sd.read(i, j))
-    predict = time_gru(np.array(dataset))
-    for i, v in predict.items():
-        path = 'cache/data/' + i.split('_')[0]
-        if os.path.exists(path):
-            v.to_csv(path + '/' + i + '.csv')
-            sd.csv2db(path + '/' + i + '.csv')
+        feature = ['height', 'pressure', 'temperature', 'dewpoint', 'direction', 'speed']
+        time = []
+        for j in tqdm(available):
+            receive = sd.read(i, j)
+            if receive is None:
 
+            dataset.append(receive)
+            time.append(datetime.datetime(year=int(j[0:4]), month=int(j[4:6]), day=int(j[6:8]), hour=int(j[8:10])))
+        break
+        predict = time_gru(dataset)
+        for j, v in predict.items():
+            path = 'cache/data/' + j.split('_')[0]
+            if os.path.exists(path):
+                v.to_csv(path + '/' + j + '.csv')
+                sd.csv2db(path + '/' + j + '.csv')

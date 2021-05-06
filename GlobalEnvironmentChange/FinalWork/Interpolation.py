@@ -2,6 +2,7 @@ import numpy as np
 
 '''
 空间插值
+克里金空间插值法
 '''
 
 
@@ -15,11 +16,11 @@ def space_kriging(train_x, train_y):
 
 '''
 时间插值
+利用RNN中的GRU模型，对时间序列进行预测，对部分空缺值填充
 '''
 
 
-def time_gru(_dataset, epoch=50, time_step=14):
-    from matplotlib import pyplot as plt
+def time_gru(_dataset, epoch=50, time_step=14, cuda_or_not=True):
     from sklearn.preprocessing import MinMaxScaler
     from torch.utils.data import TensorDataset, DataLoader
     import torch
@@ -87,7 +88,10 @@ def time_gru(_dataset, epoch=50, time_step=14):
             _x = _x.view(s, b, -1)
             return _x
 
-    model = GRU().cuda()
+    if cuda_or_not:
+        model = GRU().cuda()
+    else:
+        model = GRU()
 
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
@@ -100,8 +104,12 @@ def time_gru(_dataset, epoch=50, time_step=14):
         loss = 0
         for xb, yb in train_dl:
             # 转化数据
-            var_x = Variable(xb).cuda()
-            var_y = Variable(xb).cuda()
+            if cuda_or_not:
+                var_x = Variable(xb).cuda()
+                var_y = Variable(xb).cuda()
+            else:
+                var_x = Variable(xb)
+                var_y = Variable(xb)
 
             # 前向传播
             out = model(var_x)
@@ -117,7 +125,10 @@ def time_gru(_dataset, epoch=50, time_step=14):
         # 加入验证集
         model.eval()  # 评估模型
         with torch.no_grad():
-            valid_loss = sum(criterion(model(xb.cuda()), yb.cuda()) for xb, yb in valid_dl)
+            if cuda_or_not:
+                valid_loss = sum(criterion(model(xb.cuda()), yb.cuda()) for xb, yb in valid_dl)
+            else:
+                valid_loss = sum(criterion(model(xb), yb) for xb, yb in valid_dl)
 
         print('Epoch: {}, Loss: {:.5f}, Valid_Loss: {:.5f}'.format(e + 1, loss / len(train_dl),
                                                                    valid_loss / len(valid_dl)))
@@ -133,6 +144,15 @@ def time_gru(_dataset, epoch=50, time_step=14):
     model = model.eval()  # 转换成测试模式
 
     # 对未来一年进行预测
+    start = datetime.datetime(2008, 1, 1, 0)
+    end = datetime.datetime(2019, 12, 31, 12)
+    datelist = []
+    while start <= end:
+        datelist.append(start)
+        start += datetime.timedelta(hours=12)
+
+    for t in datelist:
+
     predict_time = []
     predict_data = list(sc.transform(real_data).T[0])
     _time = real_time[-1]
@@ -155,7 +175,7 @@ if __name__ == '__main__':
     import os
     # 提取中国探空站ID
     stationlist = pd.read_excel('UPAR_GLB_MUL_FTM_STATION.xlsx')
-    for i in list(stationlist.loc[152: 264, '区站号']):
+    for i in list(stationlist.loc[164: 252, '区站号']):
         dataset = []
         with open('cache/data/' + str(i) + '/download.json') as f:
             download = json.load(f)

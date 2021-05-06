@@ -21,7 +21,6 @@ def csv2db(_path, session=None):
     DBSession = sessionmaker(bind=con_engine)
     session = DBSession()
 
-
     class Record(Base):
         __tablename__ = 'record_' + tablename.split('_')[1][:-4]
 
@@ -32,7 +31,6 @@ def csv2db(_path, session=None):
         dewpoint = Column(Float)
         direction = Column(Float)
         speed = Column(Float)
-
 
     data = pd.read_csv(_path)
     data_nan = data.notnull()
@@ -51,7 +49,7 @@ def csv2db(_path, session=None):
     movefile(_path, 'E:/DataBackup/sounding_station/' + dbname + '/' + tablename)
 
 
-def read(_station, _record):
+def read(_station, _record, _mode='simple', _return='dataframe'):
     con_engine = create_engine(
         'mysql+pymysql://root:AEight19731224@localhost:3306/{}'.format('sounding_' + _station))
 
@@ -74,16 +72,34 @@ def read(_station, _record):
         def to_dict(self):
             return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
-    return [ven.to_dict() for ven in session.query(Record).all()]
+    if _mode == 'simple':
+        output = []
+        pressures = [850, 700, 500, 300, 200]
+        for p in pressures:
+            _data = session.query(Record).filter_by(pressure=p).one()
+            if _data:
+                output.append(_data.to_dict())
+    else:
+        output = [ven.to_dict() for ven in session.query(Record).all()]
+
+    if _return == 'dataframe':
+        return dict2pd(output)
+    else:
+        return output
+
+
+def dict2pd(_data):
+    return pd.DataFrame([list(i.values()) for i in _data], columns=list(_data[0].keys()))
 
 
 if __name__ == '__main__':
     from datetime import datetime
+
     stationlist = os.listdir('cache/data')
     for station in stationlist[167:]:
-        print('{0} 开始写入{1}数据库'.format(datetime.now().isoformat(), 'sounding_'+station))
+        print('{0} 开始写入{1}数据库'.format(datetime.now().isoformat(), 'sounding_' + station))
         recordlist = os.listdir('data/' + station)
-        if os.path.exists('cache/data/' + station  + '/download.json'):
+        if os.path.exists('cache/data/' + station + '/download.json'):
             recordlist.remove('download.json')
         for record in recordlist:
             csv2db('cache/data/' + station + '/' + record)

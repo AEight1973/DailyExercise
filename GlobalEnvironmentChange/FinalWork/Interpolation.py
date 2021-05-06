@@ -18,7 +18,7 @@ def space_kriging(train_x, train_y):
 '''
 
 
-def time_gru(dataset, epoch=50, time_step=14):
+def time_gru(_dataset, epoch=50, time_step=14):
     from matplotlib import pyplot as plt
     from sklearn.preprocessing import MinMaxScaler
     from torch.utils.data import TensorDataset, DataLoader
@@ -29,9 +29,9 @@ def time_gru(dataset, epoch=50, time_step=14):
     from sklearn.model_selection import train_test_split
 
     batch_size = 128
-    n_feature = dataset.shape[1]
+    n_feature = _dataset.shape[1]
 
-    train_set, test_set = train_test_split(dataset, train_size=0.8, shuffle=False)
+    train_set, test_set = train_test_split(_dataset, train_size=0.8, shuffle=False)
 
     # 归一化
     sc = MinMaxScaler(feature_range=(0, 1))  # 定义归一化：归一化到(0，1)之间
@@ -152,11 +152,20 @@ if __name__ == '__main__':
     import pandas as pd
     import sounding_db as sd
     import json
+    import os
     # 提取中国探空站ID
     stationlist = pd.read_excel('UPAR_GLB_MUL_FTM_STATION.xlsx')
     for i in list(stationlist.loc[152: 264, '区站号']):
+        dataset = []
         with open('cache/data/' + str(i) + '/download.json') as f:
             download = json.load(f)
-        for in range
-        sd.read()
+        available = [i for i in list(download.keys()) if download[i] == 0]
+        for j in available:
+            dataset.append(sd.read(i, j))
+    predict = time_gru(np.array(dataset))
+    for i, v in predict.items():
+        path = 'cache/data/' + i.split('_')[0]
+        if os.path.exists(path):
+            v.to_csv(path + '/' + i + '.csv')
+            sd.csv2db(path + '/' + i + '.csv')
 

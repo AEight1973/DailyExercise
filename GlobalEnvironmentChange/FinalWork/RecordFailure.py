@@ -4,15 +4,17 @@ import json
 import os
 
 
-def record_download(station, time, message=False):
+def record_download(station, time, message='Fail'):
     filepath = 'data/' + station + '/download.json'
     if os.path.exists(filepath):
         with open(filepath, 'r+') as f:
             _download = json.load(f)
     else:
         _download = dict()
-    if message:
+    if message == 'success':
         _download[time] = 0
+    elif message == 'inter':
+        _download[time] = -1
     else:
         try:
             _download[time] += 1

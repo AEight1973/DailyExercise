@@ -1,4 +1,5 @@
-import os, shutil
+import os
+import shutil
 
 
 def movefile(srcfile, dstfile):

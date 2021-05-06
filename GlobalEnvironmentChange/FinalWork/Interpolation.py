@@ -3,6 +3,8 @@ import numpy as np
 '''
 空间插值
 '''
+
+
 def space_kriging(train_x, train_y):
     import pyKriging as krige
     model = krige.kriging(train_x, train_y, name='simple')
@@ -14,12 +16,12 @@ def space_kriging(train_x, train_y):
 '''
 时间插值
 '''
-def time_gru(dataset, epoch=50, time_step=14,):
+
+
+def time_gru(dataset, epoch=50, time_step=14):
     from matplotlib import pyplot as plt
     from sklearn.preprocessing import MinMaxScaler
-    from math import sqrt
     from torch.utils.data import TensorDataset, DataLoader
-    from sklearn.metrics import mean_squared_error, mean_absolute_error
     import torch
     from torch import nn
     from torch.autograd import Variable
@@ -122,7 +124,6 @@ def time_gru(dataset, epoch=50, time_step=14,):
         Loss.append(loss / len(train_dl))
         Valid_Loss.append(valid_loss / len(valid_dl))
 
-
     '''save'''
 
     PATH = 'cache/model/temp_40m_single_{}'.format(datetime.datetime.now().strftime('%y%m%d%H%M%S'))
@@ -145,10 +146,17 @@ def time_gru(dataset, epoch=50, time_step=14,):
         predict_data.append(pred_predict.data.cpu().numpy()[0, -1, 0])
         predict_time.append(_time)
     predict_temp = sc.inverse_transform(np.array(predict_data[-367:]).reshape(-1, 1))
-    plt.plot(predict_time, predict_temp, color='orange', label='40M Predict Temperature')
+    return predict_temp
 
-    plt.title('40M Temperature Training Consult')
-    plt.xlabel('Time')
-    plt.ylabel('Temperature')
-    plt.legend()
-    plt.show()
+if __name__ == '__main__':
+    import pandas as pd
+    import sounding_db as sd
+    import json
+    # 提取中国探空站ID
+    stationlist = pd.read_excel('UPAR_GLB_MUL_FTM_STATION.xlsx')
+    for i in list(stationlist.loc[152: 264, '区站号']):
+        with open('cache/data/' + str(i) + '/download.json') as f:
+            download = json.load(f)
+        for in range
+        sd.read()
+

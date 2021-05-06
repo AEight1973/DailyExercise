@@ -1,10 +1,10 @@
 import os
-import numpy as np
 import pandas as pd
-from sqlalchemy import Column, Integer, create_engine, DECIMAL, SmallInteger,Float,FLOAT
+from sqlalchemy import Column, Integer, create_engine, SmallInteger, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
+from MoveFile import movefile
 
 
 def csv2db(_path, session=None):
@@ -48,6 +48,8 @@ def csv2db(_path, session=None):
     session.commit()
     session.close()
 
+    movefile(_path, 'E:/DataBackup/sounding_station/' + dbname + '/' + tablename)
+
 
 def read(_station, _record):
     con_engine = create_engine(
@@ -81,9 +83,9 @@ if __name__ == '__main__':
     for station in stationlist[167:]:
         print('{0} 开始写入{1}数据库'.format(datetime.now().isoformat(), 'sounding_'+station))
         recordlist = os.listdir('data/' + station)
-        if os.path.exists('data/' + station  + '/download.json'):
+        if os.path.exists('cache/data/' + station  + '/download.json'):
             recordlist.remove('download.json')
         for record in recordlist:
-            csv2db('data/' + station + '/' + record)
+            csv2db('cache/data/' + station + '/' + record)
             print('--> {0} 成功写入表{1}'.format(datetime.now().isoformat(), 'record_' + record[:-4]))
         print('{0} 成功写入{1}数据库'.format(datetime.now().isoformat(), 'sounding_' + station))

@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 def csv2datasets(height=4):
-    file_list = os.listdir('cache/data/')
+    file_list = os.listdir('../GlobalEnvironmentChange/FinalWork/cache/data/')
     # features = ['pressure', 'temperature', 'dewpoint', 'direction', 'speed', 'u_wind', 'v_wind']
     features = ['temperature']
     output = pd.DataFrame(columns=features)

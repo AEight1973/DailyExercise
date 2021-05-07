@@ -2,8 +2,8 @@ import datetime
 from metpy.units import units
 from siphon.simplewebservice.wyoming import WyomingUpperAir
 
-start = datetime.datetime(2010, 7, 29, 12)
-end = datetime.datetime(2010, 7, 29, 12)
+start = datetime.datetime(2009, 7, 27, 12)
+end = datetime.datetime(2009, 7, 27, 12)
 
 datelist = []
 while start <= end:
@@ -11,7 +11,7 @@ while start <= end:
     start += datetime.timedelta(hours=12)
 
 # 选择下载站点（以上海宝山站为例）
-stationlist = ['58362']
+stationlist = ['83971']
 
 # 批量下载
 for station in stationlist:

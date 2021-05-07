@@ -4,8 +4,8 @@ import json
 import os
 
 
-def record_download(station, time, message='Fail'):
-    filepath = 'data/' + station + '/download.json'
+def record_download(station, time, message='fail'):
+    filepath = 'cache/data/' + station + '/download.json'
     if os.path.exists(filepath):
         with open(filepath, 'r+') as f:
             _download = json.load(f)
@@ -15,9 +15,14 @@ def record_download(station, time, message='Fail'):
         _download[time] = 0
     elif message == 'inter':
         _download[time] = -1
+    elif message == 'missing':
+        _download[time] = -2
     else:
         try:
-            _download[time] += 1
+            if _download[time] < 1:
+                _download[time] = 1
+            else:
+                _download[time] += 1
         except KeyError:
             _download[time] = 1
     with open(filepath, 'w+') as f:
@@ -26,7 +31,7 @@ def record_download(station, time, message='Fail'):
 
 def record_journal(station):
     # 追加记录
-    with open('data/' + station + '/download.json', 'r+') as f:
+    with open('cache/data/' + station + '/download.json', 'r+') as f:
         _download = json.load(f)
     per = len([i for i in list(_download.values()) if i == 0]) / 9484
     with open('cache/record.txt', 'a+') as f:

@@ -10,15 +10,20 @@ import sqlalchemy
 from RecordFailure import record_download
 
 
-def csv2db(_path, _tag):
-    _, _, dbname, tablename = _path.split('/')
+def csv2db(_path, _tag, _record=None):
+    if _record is None:
+        [dbname, tablename] = _path.split('/')[-2:]
+    else:
+        dbname = _record.split('_')[0]
+        tablename = _record
 
     data = pd.read_csv(_path)
     result = examine(data, _tag, _path)
     if not result[0]:
         if not os.path.exists('E:/DataBackup/sounding_station/' + dbname + '/missing'):
             os.makedirs('E:/DataBackup/sounding_station/' + dbname + '/missing')
-        movefile(_path, 'E:/DataBackup/sounding_station/' + dbname + '/missing/' + tablename)
+        if _path != 'E:/DataBackup/sounding_station/' + dbname + '/missing/' + tablename:
+            movefile(_path, 'E:/DataBackup/sounding_station/' + dbname + '/missing/' + tablename)
         return _tag
 
     data_nan = data.notnull()
@@ -128,10 +133,16 @@ def examine(_data, _tag, _path):
         return [False, _tag]
 
     # 监测文件是否出现缺失，则移动并跟更改download文件
+    pressures = [850, 700, 500, 300, 200]
+    new_tag = None
+    for _p in pressures:
+        if _p in list(_data['pressure']):
+            new_tag = _p
+            break
     if _tag is None:
-        return [True, float(_data.iloc[0, 1])]
+        return [True, new_tag]
     else:
-        if _tag == float(_data.iloc[0, 1]):
+        if _tag == new_tag:
             return [True, _tag]
         else:
             record_download(s, t, 'missing')
@@ -142,7 +153,7 @@ if __name__ == '__main__':
     from datetime import datetime
 
     stationlist = os.listdir('cache/data')
-    for station in stationlist[167:]:
+    for station in stationlist[:167]:
         print('{0} 开始写入{1}数据库'.format(datetime.now().isoformat(), 'sounding_' + station))
         recordlist = os.listdir('cache/data/' + station)
         if os.path.exists('cache/data/' + station + '/download.json'):

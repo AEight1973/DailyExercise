@@ -20,7 +20,7 @@ def space_kriging(train_x, train_y):
 '''
 
 
-def time_gru(_dataset, epoch=50, time_step=14, cuda_or_not=True):
+def time_gru(_dataset, _code, _station, epoch=50, time_step=6, cuda_or_not=True):
     from sklearn.preprocessing import MinMaxScaler
     from torch.utils.data import TensorDataset, DataLoader
     import torch
@@ -29,15 +29,18 @@ def time_gru(_dataset, epoch=50, time_step=14, cuda_or_not=True):
     import datetime
     from sklearn.model_selection import train_test_split
 
+    data = _dataset.values
     batch_size = 128
-    n_feature = _dataset.shape[1]
+    n_feature = data.shape[1]
+    _time = list(_dataset.index)
 
-    train_set, test_set = train_test_split(_dataset, train_size=0.8, shuffle=False)
+    train_set, test_set = train_test_split(data, train_size=0.8, shuffle=False)
+    time_train, time_test = _time[:len(train_set)], _time[len(train_set):]
 
     # 归一化
-    sc = MinMaxScaler(feature_range=(0, 1))  # 定义归一化：归一化到(0，1)之间
-    training_set_scaled = sc.fit_transform(train_set)  # 求得训练集的最大值，最小值这些训练集固有的属性，并在训练集上进行归一化
-    test_set = sc.transform(test_set)  # 利用训练集的属性对测试集进行归一化
+    sc = MinMaxScaler(feature_range=(0, 1))
+    training_set_scaled = sc.fit_transform(train_set)
+    test_set = sc.transform(test_set)
 
     x_train = []
     y_train = []
@@ -45,26 +48,25 @@ def time_gru(_dataset, epoch=50, time_step=14, cuda_or_not=True):
     x_test = []
     y_test = []
 
-    # 测试集：csv表格中前2426-300=2126天数据
-    # 利用for循环，遍历整个训练集，提取训练集中连续60天的开盘价作为输入特征x_train，第61天的数据作为标签，for循环共构建2426-300-60=2066组数据。
+    # 将时间序列转化为数据集
     for i in range(time_step, len(training_set_scaled)):
-        x_train.append(training_set_scaled[i - time_step:i, 0])
-        y_train.append(training_set_scaled[i, 0])
+        if time_train[i - time_step] == time_train[i] - datetime.timedelta(hours=12) * time_step:
+            x_train.append(training_set_scaled[i - time_step:i, :])
+            y_train.append(training_set_scaled[i, :])
     # 将训练集由list格式变为array格式
     x_train, y_train = torch.FloatTensor(x_train), torch.FloatTensor(y_train)
 
     # 使x_train符合RNN(PyTorch)输入要求：[循环核时间展开步数， 送入样本数， 每个时间步输入特征个数]。
-    # 此处整个数据集送入，送入样本数为x_train.shape[0]即2066组数据；输入60个开盘价，预测出第61天的开盘价，循环核时间展开步数为60; 每个时间步送入的特征是某一天的开盘价，只有1个数据，故每个时间步输入特征个数为1
     x_train = x_train.view(-1, time_step, n_feature)
+    y_train = y_train.view(-1, n_feature)
 
-    # 测试集：csv表格中后300天数据
-    # 利用for循环，遍历整个测试集，提取测试集中连续60天的开盘价作为输入特征x_train，第61天的数据作为标签，for循环共构建300-60=240组数据。
     for i in range(time_step, len(test_set)):
-        x_test.append(test_set[i - time_step:i, 0])
-        y_test.append(test_set[i, 0])
-    # 测试集变array并reshape为符合RNN(PyTorch)输入要求：[循环核时间展开步数， 送入样本数， 每个时间步输入特征个数]
+        if time_test[i - time_step] == time_test[i] - datetime.timedelta(hours=12) * time_step:
+            x_test.append(test_set[i - time_step:i, :])
+            y_test.append(test_set[i, :])
     x_test, y_test = torch.FloatTensor(x_test), torch.FloatTensor(y_test)
     x_test = x_test.view(-1, time_step, n_feature)
+    y_test = y_test.view(-1, n_feature)
 
     # 使用torch的TensorDataset进行数据集的分批处理
     train_ds = TensorDataset(x_train, y_train)
@@ -137,36 +139,44 @@ def time_gru(_dataset, epoch=50, time_step=14, cuda_or_not=True):
 
     '''save'''
 
-    PATH = 'cache/model/temp_40m_single_{}'.format(datetime.datetime.now().strftime('%y%m%d%H%M%S'))
+    _path = 'cache/data/' + _station + '/model'
+    if not os.path.exists(_path):
+        os.makedirs(_path)
+    PATH = _path + '/interpolation_' + str(c)
     torch.save(model, PATH)
 
     '''predict'''
     model = model.eval()  # 转换成测试模式
 
-    # 对未来一年进行预测
     start = datetime.datetime(2008, 1, 1, 0)
+    for i in range(time_step, len(_time)):
+        if _time[i - time_step - 1] == _time[i] - datetime.timedelta(hours=12) * (time_step - 1):
+            start = _time[i]
+            break
     end = datetime.datetime(2019, 12, 31, 12)
     datelist = []
     while start <= end:
         datelist.append(start)
         start += datetime.timedelta(hours=12)
 
-    # for t in datelist:
-    #
-    # predict_time = []
-    # predict_data = list(sc.transform(real_data).T[0])
-    # _time = real_time[-1]
-    # for i in range(367):
-    #     if _time.hour == 0 and _time.month == 10:
-    #         _time = datetime.datetime(_time.year + 1, 4, 1, 0, 0, 0)
-    #     else:
-    #         _time += datetime.timedelta(hours=12)
-    #     var_predict = Variable(torch.FloatTensor(predict_data[-time_step:]).view(-1, time_step, n_feature)).cuda()
-    #     pred_predict = model(var_predict)
-    #     predict_data.append(pred_predict.data.cpu().numpy()[0, -1, 0])
-    #     predict_time.append(_time)
-    # predict_temp = sc.inverse_transform(np.array(predict_data[-367:]).reshape(-1, 1))
-    # return predict_temp
+    predict_time = []
+    predict_data = []
+    for t in datelist:
+        if t in _time:
+            continue
+        else:
+            _data = []
+            for i in range(time_step, 0, -1):
+                _t = t - datetime.timedelta(hours=12) * i
+                if _t in _time:
+                    _data.append(list(_dataset.loc[_t]))
+                else:
+                    _data.append(predict_data[predict_time.index(_t)])
+            var_predict = Variable(torch.FloatTensor(_data).view(-1, time_step, n_feature)).cuda()
+            pred_predict = model(var_predict)
+            predict_data.append(list(pred_predict.data.cpu().numpy()[0, -1, :]))
+            predict_time.append(_time)
+    return pd.DataFrame(predict_data, index=predict_time, columns=_dataset.columns)
 
 
 if __name__ == '__main__':
@@ -176,27 +186,33 @@ if __name__ == '__main__':
     import os
     import datetime
     from tqdm import tqdm
+    from RecordFailure import record_download
 
     # 提取中国探空站ID
     stationlist = pd.read_excel('UPAR_GLB_MUL_FTM_STATION.xlsx')
     for i in list(stationlist.loc[164: 252, '区站号']):
         print('开始插值站点' + str(i))
-        dataset = []
         with open('cache/data/' + str(i) + '/download.json') as f:
             download = json.load(f)
         available = [i for i in list(download.keys()) if download[i] == 0]
-        feature = ['height', 'pressure', 'temperature', 'dewpoint', 'direction', 'speed']
+        feature = ['temperature', 'dewpoint', 'direction', 'speed']
         time = []
+        dataset = dict()
         for j in tqdm(available):
             receive = sd.read(i, j)
-            if receive is None:
-
-            dataset.append(receive)
+            for l in receive:
+                dataset[l['pressure']] += l[feature].values
             time.append(datetime.datetime(year=int(j[0:4]), month=int(j[4:6]), day=int(j[6:8]), hour=int(j[8:10])))
-        break
-        predict = time_gru(dataset)
-        for j, v in predict.items():
-            path = 'cache/data/' + j.split('_')[0]
+        predict = dict()
+        for c, d in dataset.items():
+            predict[c] = time_gru(pd.DataFrame(d, index=time, columns=feature), c, str(i))
+        for time in predict[0].index:
+            new_array = []
+            for p in list(predict.keys()):
+                new_array.append([p] + list(predict[p].loc[time]))
+            path = 'cache/data/' + str(i)
+            new_data = pd.DataFrame(new_array, columns=['pressure'] + feature)
             if os.path.exists(path):
-                v.to_csv(path + '/' + j + '.csv')
-                sd.csv2db(path + '/' + j + '.csv')
+                new_data.to_csv(path + '/' + str(i) + '_' + time.strftime('%Y%m%d%H') + '.csv')
+                sd.csv2db(path + '/' + str(i) + '_' + time.strftime('%Y%m%d%H') + '.csv', None)
+                record_download(str(i), time.strftime('%Y%m%d%H'), 'inter')

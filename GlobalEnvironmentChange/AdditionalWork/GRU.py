@@ -97,7 +97,7 @@ dataset = pd.DataFrame(data, columns=features, index=time)
 batch_size = 128
 n_feature = data.shape[1]
 time_step = 7
-epoch = 50
+epoch = 15
 n_predict = 20
 n_class = 1
 
@@ -118,20 +118,18 @@ for i in range(time_step, len(training_set_scaled)):
 x_train, y_train = torch.FloatTensor(x_train), torch.FloatTensor(y_train)
 # 使x_train符合RNN(PyTorch)输入要求：[循环核时间展开步数， 送入样本数， 每个时间步输入特征个数]。
 x_train = x_train.view(-1, time_step, n_feature)
-y_train = y_train.T
 
 for i in range(time_step, len(test_set_scaled)):
     x_test.append(test_set_scaled[i - time_step:i, :])
     y_test.append(test_set_scaled[i, :])
 x_test, y_test = torch.FloatTensor(x_test), torch.FloatTensor(y_test)
 x_test = x_test.view(-1, time_step, n_feature)
-y_test = y_test.T
 
 # 使用torch的TensorDataset进行数据集的分批处理
-train_ds = TensorDataset(x_train, y_train)
-train_dl = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=True)
-valid_ds = TensorDataset(x_test, y_test)
-valid_dl = DataLoader(dataset=valid_ds, batch_size=batch_size)
+train_dl = [DataLoader(dataset=TensorDataset(x_train, y_train[:, i]), batch_size=batch_size, shuffle=True)
+            for i in range(n_feature)]
+valid_dl = [DataLoader(dataset=TensorDataset(x_test, y_test[:, i]), batch_size=batch_size, shuffle=True)
+            for i in range(n_feature)]
 
 '''model'''
 
@@ -143,14 +141,11 @@ class GRU(nn.Module):
         self.linear = nn.Linear(in_features=10, out_features=n_class)
 
     def forward(self, _x):
-        print(_x.shape)
         _x, _ = self.gru(_x)
-        print(_x.shape)
         s, b, h = _x.shape
         _x = _x.contiguous().view(s * b, h)  # 转换成线性层的输入格式
         _x = self.linear(_x)
         _x = _x.view(s, b, -1)
-        print(_x.shape)
         return _x
 
 
@@ -169,10 +164,10 @@ for i in range(n_feature):
         model.train()
 
         loss = 0
-        for xb, yb in train_dl:
+        for xb, yb in train_dl[i]:
             # 转化数据
             var_x = Variable(xb).cuda()
-            var_y = Variable(yb[i]).cuda()
+            var_y = Variable(yb).cuda()
 
             # 前向传播
             out = model(var_x)
@@ -189,7 +184,7 @@ for i in range(n_feature):
         # 加入验证集，评估模型
         model.eval()
         with torch.no_grad():
-            valid_loss = sum(criterion(model(xb.cuda()), yb[i].cuda()) for xb, yb in valid_dl)
+            valid_loss = sum(criterion(model(xb.cuda()), yb.cuda()) for xb, yb in valid_dl[i])
 
         print('--Epoch: {}, Loss: {:.5f}, Valid_Loss: {:.5f}'.format(e + 1, loss / len(train_dl),
                                                                      valid_loss / len(valid_dl)))
@@ -220,11 +215,12 @@ def predict(x, inverse=True):
         _pred = m(var)
         # 改变输出的格式
         pred.append(_pred.data.cpu().numpy()[:, -1, 0].reshape(-1))
+    pred = np.array(pred).T
     if inverse:
         # 对训练数据还原---从（0，1）反归一化到原始范围
-        return sc.inverse_transform(np.array(pred))
+        return sc.inverse_transform(pred)
     else:
-        return np.array(pred)
+        return pred
 
 
 # 对训练数据进行绘图
@@ -249,7 +245,7 @@ for i in range(n_predict):
     else:
         _time += datetime.timedelta(days=1)
     x_predict = torch.FloatTensor(predict_data[-time_step:]).view(-1, time_step, n_feature)
-    predict_data += predict(x_predict)
+    predict_data += list(predict(x_predict, False))
     predict_time.append(_time)
 predict_temp = sc.inverse_transform(np.array(predict_data[-n_predict:]))
 # plt.plot(predict_time, predict_temp, color='orange', label='40M Predict Temperature')

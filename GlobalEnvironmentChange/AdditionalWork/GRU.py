@@ -9,10 +9,96 @@ import datetime
 from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import LabelEncoder
 
-'''Dataset
-数据集: 崇明历史气候记录.txt
-数据集包含： 崇明区近10年六月主要气象指标
+# '''Dataset
+# 数据集: 崇明历史气候记录.txt
+# 数据集包含： 崇明区近10年六月主要气象指标
+# I   具体指标：
+#     1)  日期: yyyy-mm-dd 星期X
+#     2)  最高气温: TT℃
+#     3)  最低气温: tt℃
+#     4)  天气: w
+#     5)  风向: d风 n级
+# II  中文转编码
+#     1)  天气： {'晴': 0, '多云': 1, '阴': 2,
+#                '小雨': 3, '阵雨': 4, '中雨': 5,
+#                '大雨': 6, '雷阵雨': 7, '暴雨': 8}
+#     2)  风向： {'北风': 0, '东北风': 1, '东风': 2, '东南风': 3,
+#                '南风': 4, '西南风': 5, '西风': 6, '西北风': 7}
+# '''
+#
+# # 读取文件
+# with open('data/崇明历史气候记录.txt', 'r+', encoding='utf8') as f:
+#     file = f.read().split('\n')
+#     _data = np.array(file).reshape((-1, 5))
+#
+# # 中文转码字典
+# weather2dict = {'晴': 0, '多云': 1, '阴': 2,
+#                 '小雨': 3, '阵雨': 4, '中雨': 5,
+#                 '大雨': 6, '雷阵雨': 7, '暴雨': 8}
+# wind2dict = {'北风': 0, '东北风': 1, '东风': 2, '东南风': 3,
+#              '南风': 4, '西南风': 5, '西风': 6, '西北风': 7}
+# features = ['最高气温', '最低气温', '天气', '风向', '风速']
+# features_en = ['hightemp', 'lowtemp', 'weather', 'winddir', 'windspe']
+#
+# # 清洗数据
+# data = []
+# for i in _data[1:, 1:]:
+#     # 最高 & 最低气温
+#     t1 = int(i[0][:-1])
+#     t2 = int(i[1][:-1])
+#     # 天气
+#     if '~' in i[2]:
+#         W = i[2].split('~')
+#     elif '转' in i[2]:
+#         W = i[2].split('转')
+#     else:
+#         W = [i[2]]
+#     if '雨' in W[-1]:
+#         w = W[-1][-2:]
+#     elif '雨' in W[0]:
+#         w = W[0][-2:]
+#     else:
+#         w = W[0]
+#     # 风向 & 风速
+#     if i[3] == '暂无实况':
+#         d = '东南风'
+#         v = 2
+#     else:
+#         wind = i[3].split(' ')
+#         if '~' in wind[0]:
+#             d = wind[0].split('~')[0]
+#         elif '转' in wind[0]:
+#             d = wind[0].split('转')[0]
+#         else:
+#             d = wind[0]
+#         V = wind[1]
+#         if V == '微风':
+#             V = '1级'
+#         elif '风' in V:
+#             V = V.split('风')[-1]
+#         if '~' in V:
+#             V = V.split('~')[0]
+#         elif '转' in V:
+#             V = V.split('转')[0]
+#         if '-' in V:
+#             v = (int(V.split('-')[0]) + int(V.split('-')[1][0])) / 2
+#         elif V == '小于3级':
+#             v = 2
+#         else:
+#             v = int(V[0])
+#     data.append([t1, t2, weather2dict[w], wind2dict[d], v])
+#
+# data = np.array(data)
+# time = [datetime.date(int(i[:4]), int(i[5:7]), int(i[8:10])) for i in _data[1:, 0].reshape(-1)]
+# dataset = pd.DataFrame(data, columns=features, index=time)
+
+'''
+Dataset
+
+数据集: weatherdata_2011_2021.xlsx
+数据集包含： 崇明区近10年主要气象指标
 I   具体指标：
     1)  日期: yyyy-mm-dd 星期X
     2)  最高气温: TT℃
@@ -28,82 +114,33 @@ II  中文转编码
 '''
 
 # 读取文件
-with open('data/崇明历史气候记录.txt', 'r+', encoding='utf8') as f:
-    file = f.read().split('\n')
-    _data = np.array(file).reshape((-1, 5))
+_data = pd.read_excel('data/weatherdata_2011_2021.xlsx', index_col=0)
 
-# 中文转码字典
-weather2dict = {'晴': 0, '多云': 1, '阴': 2,
-                '小雨': 3, '阵雨': 4, '中雨': 5,
-                '大雨': 6, '雷阵雨': 7, '暴雨': 8}
-wind2dict = {'北风': 0, '东北风': 1, '东风': 2, '东南风': 3,
-             '南风': 4, '西南风': 5, '西风': 6, '西北风': 7}
-features = ['最高气温', '最低气温', '天气', '风向', '风速']
-features_en = ['hightemp', 'lowtemp', 'weather', 'winddir', 'windspe']
+# 部分值修正
+_data.loc['2013-06-30', 'Weather'] = '小雨'
 
-# 清洗数据
-data = []
-for i in _data[1:, 1:]:
-    # 最高 & 最低气温
-    t1 = int(i[0][:-1])
-    t2 = int(i[1][:-1])
-    # 天气
-    if '~' in i[2]:
-        W = i[2].split('~')
-    elif '转' in i[2]:
-        W = i[2].split('转')
-    else:
-        W = [i[2]]
-    if '雨' in W[-1]:
-        w = W[-1][-2:]
-    elif '雨' in W[0]:
-        w = W[0][-2:]
-    else:
-        w = W[0]
-    # 风向 & 风速
-    if i[3] == '暂无实况':
-        d = '东南风'
-        v = 2
-    else:
-        wind = i[3].split(' ')
-        if '~' in wind[0]:
-            d = wind[0].split('~')[0]
-        elif '转' in wind[0]:
-            d = wind[0].split('转')[0]
-        else:
-            d = wind[0]
-        V = wind[1]
-        if V == '微风':
-            V = '1级'
-        elif '风' in V:
-            V = V.split('风')[-1]
-        if '~' in V:
-            V = V.split('~')[0]
-        elif '转' in V:
-            V = V.split('转')[0]
-        if '-' in V:
-            v = (int(V.split('-')[0]) + int(V.split('-')[1][0])) / 2
-        elif V == '小于3级':
-            v = 2
-        else:
-            v = int(V[0])
-    data.append([t1, t2, weather2dict[w], wind2dict[d], v])
+# LabelEncoder 中文编码
+wind_label = LabelEncoder()
+_data['WindDir'] = wind_label.fit_transform(_data['WindDir'])
+weather_label = LabelEncoder()
+_data['Weather'] = weather_label.fit_transform(_data['Weather'])
 
-data = np.array(data)
-time = [datetime.date(int(i[:4]), int(i[5:7]), int(i[8:10])) for i in _data[1:, 0].reshape(-1)]
-dataset = pd.DataFrame(data, columns=features, index=time)
 
-# 数据模拟
+features = ['MaxTemp', 'MinTemp', 'WindDir', 'Weather']
+dataset = _data[features].dropna()
+data = np.array(dataset)
+time = [datetime.date(int(i[:4]), int(i[5:7]), int(i[8:10])) for i in dataset.index]
+
 
 # 基本变量
-batch_size = 128
+batch_size = 256
 n_feature = data.shape[1]
-time_step = 7
-epoch = 15
+time_step = 4
+epoch = 50
 n_predict = 20
 n_class = 1
 
-train_set, test_set = train_test_split(data, train_size=0.8, shuffle=False)
+train_set, test_set, train_time, test_time = train_test_split(data, time, train_size=0.8, shuffle=False)
 
 # 归一化
 sc = MinMaxScaler(feature_range=(0, 1))
@@ -114,16 +151,18 @@ x_train, y_train, x_test, y_test = [], [], [], []
 
 # 将时间序列转化为数据集
 for i in range(time_step, len(training_set_scaled)):
-    x_train.append(training_set_scaled[i - time_step:i, :])
-    y_train.append(training_set_scaled[i, :])
+    if train_time[i - time_step] == train_time[i] - datetime.timedelta(days=1) * time_step:
+        x_train.append(training_set_scaled[i - time_step:i, :])
+        y_train.append(training_set_scaled[i, :])
 # 将训练集由list格式变为FloatTensor格式
 x_train, y_train = torch.FloatTensor(x_train), torch.FloatTensor(y_train)
 # 使x_train符合RNN(PyTorch)输入要求：[循环核时间展开步数， 送入样本数， 每个时间步输入特征个数]。
 x_train = x_train.view(-1, time_step, n_feature)
 
 for i in range(time_step, len(test_set_scaled)):
-    x_test.append(test_set_scaled[i - time_step:i, :])
-    y_test.append(test_set_scaled[i, :])
+    if test_time[i - time_step] == test_time[i] - datetime.timedelta(days=1) * time_step:
+        x_test.append(test_set_scaled[i - time_step:i, :])
+        y_test.append(test_set_scaled[i, :])
 x_test, y_test = torch.FloatTensor(x_test), torch.FloatTensor(y_test)
 x_test = x_test.view(-1, time_step, n_feature)
 
@@ -133,13 +172,20 @@ train_dl = [DataLoader(dataset=TensorDataset(x_train, y_train[:, i]), batch_size
 valid_dl = [DataLoader(dataset=TensorDataset(x_test, y_test[:, i]), batch_size=batch_size, shuffle=True)
             for i in range(n_feature)]
 
-'''model'''
+'''
+model
+
+模型结构: 3 * GRU -> Linear -> 2 * GRU -> Linear
+损失函数: 交叉熵损失函数 CrossEntropyLoss
+'''
 
 
 class GRU(nn.Module):
     def __init__(self):
         super(GRU, self).__init__()
-        self.gru = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=2, dropout=0.2, batch_first=True)
+        self.gru = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=3, dropout=0.1, batch_first=True)
+        self.linear = nn.Linear(in_features=10, out_features=n_feature)
+        self.gru = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=2, dropout=0.1, batch_first=True)
         self.linear = nn.Linear(in_features=10, out_features=n_class)
 
     def forward(self, _x):
@@ -194,12 +240,12 @@ for i in range(n_feature):
         Valid_Loss.append(valid_loss / len(valid_dl))
     Model.append(model)
 
-    # 保存模型
-    path = 'model'
-    if not os.path.exists(path):
-        os.makedirs(path)
-    PATH = path + '/' + features_en[i] + '_' + datetime.datetime.now().strftime('%m%d%H%M')
-    torch.save(model, PATH)
+    # # 保存模型
+    # path = 'model'
+    # if not os.path.exists(path):
+    #     os.makedirs(path)
+    # PATH = path + '/' + features[i] + '_' + datetime.datetime.now().strftime('%m%d%H%M')
+    # torch.save(model, PATH)
 
 '''predict'''
 # 测试集输入模型进行预测
@@ -242,10 +288,11 @@ predict_time = []
 predict_data = list(sc.transform(data))
 _time = time[-1]
 for i in range(n_predict):
-    if _time.day == 30:
-        _time = datetime.date(_time.year + 1, 6, 1)
-    else:
-        _time += datetime.timedelta(days=1)
+    # if _time.day == 30:
+    #     _time = datetime.date(_time.year + 1, 6, 1)
+    # else:
+    #     _time += datetime.timedelta(days=1)
+    _time += datetime.timedelta(days=1)
     x_predict = torch.FloatTensor(predict_data[-time_step:]).view(-1, time_step, n_feature)
     predict_data += list(predict(x_predict, False))
     predict_time.append(_time)

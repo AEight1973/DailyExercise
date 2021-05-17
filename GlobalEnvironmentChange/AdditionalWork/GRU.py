@@ -93,6 +93,8 @@ data = np.array(data)
 time = [datetime.date(int(i[:4]), int(i[5:7]), int(i[8:10])) for i in _data[1:, 0].reshape(-1)]
 dataset = pd.DataFrame(data, columns=features, index=time)
 
+# 数据模拟
+
 # 基本变量
 batch_size = 128
 n_feature = data.shape[1]

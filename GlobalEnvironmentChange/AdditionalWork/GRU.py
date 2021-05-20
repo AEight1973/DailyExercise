@@ -125,20 +125,20 @@ _data['WindDir'] = wind_label.fit_transform(_data['WindDir'])
 weather_label = LabelEncoder()
 _data['Weather'] = weather_label.fit_transform(_data['Weather'])
 
-
-features = ['MaxTemp', 'MinTemp', 'WindDir', 'Weather']
+# features = ['MaxTemp', 'MinTemp', 'WindDir', 'Weather']
+features = ['MaxTemp']
 dataset = _data[features].dropna()
 data = np.array(dataset)
 time = [datetime.date(int(i[:4]), int(i[5:7]), int(i[8:10])) for i in dataset.index]
 
-
 # 基本变量
 batch_size = 256
 n_feature = data.shape[1]
-time_step = 4
+time_step = 10
 epoch = 50
 n_predict = 20
 n_class = 1
+learn_rate = 1e-2
 
 train_set, test_set, train_time, test_time = train_test_split(data, time, train_size=0.8, shuffle=False)
 
@@ -148,12 +148,14 @@ training_set_scaled = sc.fit_transform(train_set)
 test_set_scaled = sc.transform(test_set)
 
 x_train, y_train, x_test, y_test = [], [], [], []
+train_time_cleaned, test_time_cleaned = [], []
 
 # 将时间序列转化为数据集
 for i in range(time_step, len(training_set_scaled)):
     if train_time[i - time_step] == train_time[i] - datetime.timedelta(days=1) * time_step:
         x_train.append(training_set_scaled[i - time_step:i, :])
         y_train.append(training_set_scaled[i, :])
+        train_time_cleaned.append(train_time[i])
 # 将训练集由list格式变为FloatTensor格式
 x_train, y_train = torch.FloatTensor(x_train), torch.FloatTensor(y_train)
 # 使x_train符合RNN(PyTorch)输入要求：[循环核时间展开步数， 送入样本数， 每个时间步输入特征个数]。
@@ -163,13 +165,14 @@ for i in range(time_step, len(test_set_scaled)):
     if test_time[i - time_step] == test_time[i] - datetime.timedelta(days=1) * time_step:
         x_test.append(test_set_scaled[i - time_step:i, :])
         y_test.append(test_set_scaled[i, :])
+        test_time_cleaned.append(test_time[i])
 x_test, y_test = torch.FloatTensor(x_test), torch.FloatTensor(y_test)
 x_test = x_test.view(-1, time_step, n_feature)
 
 # 使用torch的TensorDataset进行数据集的分批处理
-train_dl = [DataLoader(dataset=TensorDataset(x_train, y_train[:, i]), batch_size=batch_size, shuffle=True)
+train_dl = [DataLoader(dataset=TensorDataset(x_train, y_train[:, i]), batch_size=batch_size)
             for i in range(n_feature)]
-valid_dl = [DataLoader(dataset=TensorDataset(x_test, y_test[:, i]), batch_size=batch_size, shuffle=True)
+valid_dl = [DataLoader(dataset=TensorDataset(x_test, y_test[:, i]), batch_size=batch_size)
             for i in range(n_feature)]
 
 '''
@@ -177,24 +180,45 @@ model
 
 模型结构: 3 * GRU -> Linear -> 2 * GRU -> Linear
 损失函数: 交叉熵损失函数 CrossEntropyLoss
+优化器: Adam
 '''
 
 
 class GRU(nn.Module):
     def __init__(self):
         super(GRU, self).__init__()
-        self.gru = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=3, dropout=0.1, batch_first=True)
-        self.linear = nn.Linear(in_features=10, out_features=n_feature)
-        self.gru = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=2, dropout=0.1, batch_first=True)
-        self.linear = nn.Linear(in_features=10, out_features=n_class)
+        self.gru1 = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=3, dropout=0.2, batch_first=True)
+        self.linear1 = nn.Linear(in_features=10, out_features=n_feature)
+        self.gru2 = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=2, dropout=0.2, batch_first=True)
+        self.linear2 = nn.Linear(in_features=10, out_features=n_class)
 
     def forward(self, _x):
-        _x, _ = self.gru(_x)
+        _x, _ = self.gru1(_x)
         s, b, h = _x.shape
         _x = _x.contiguous().view(s * b, h)  # 转换成线性层的输入格式
-        _x = self.linear(_x)
+        _x = self.linear1(_x)
+        _x = _x.view(s, b, -1)
+        _x, _ = self.gru2(_x)
+        s, b, h = _x.shape
+        _x = _x.contiguous().view(s * b, h)  # 转换成线性层的输入格式
+        _x = self.linear2(_x)
         _x = _x.view(s, b, -1)
         return _x
+
+
+# class GRU(nn.Module):
+#     def __init__(self):
+#         super(GRU, self).__init__()
+#         self.gru1 = nn.LSTM(input_size=1, hidden_size=4, num_layers=2, dropout=0.2, batch_first=True)
+#         self.linear = nn.Linear(in_features=4, out_features=1)
+#
+#     def forward(self, _x):
+#         _x, _ = self.gru1(_x)
+#         s, b, h = _x.shape
+#         _x = _x.contiguous().view(s * b, h)  # 转换成线性层的输入格式
+#         _x = self.linear(_x)
+#         _x = _x.view(s, b, -1)
+#         return _x
 
 
 # 定义损失函数
@@ -204,7 +228,7 @@ Model = []
 for i in range(n_feature):
     print('正在训练 {} 要素的GRU模型'.format(features[i]))
     model = GRU().cuda()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
 
     # 开始训练
     Loss, Valid_Loss = [], []
@@ -251,9 +275,12 @@ for i in range(n_feature):
 # 测试集输入模型进行预测
 Model = [i.eval() for i in Model]  # 转换成测试模式
 
-# # 对真实数据进行绘图
-# plt.plot(time, data, color='red', label='40M Real Temperature')
+# 对真实数据进行绘图
+data_maxtemp = data[:, [0]]
+plt.plot(time, data_maxtemp, color='red', label='40M Real MaxTemperature')
 
+
+# plt.show()
 
 def predict(x, inverse=True):
     # 转化为Variable并训练
@@ -272,35 +299,35 @@ def predict(x, inverse=True):
 
 
 # 对训练数据进行绘图
-train_temp = predict(x_train)
-# # 画出真实数据和预测数据的对比曲线
-# train_time = real_time[time_step: len(train_set)]
-# plt.plot(train_time, train_temp, color='blue', label='40M Train Temperature')
+train_data = predict(x_train)
+# 画出真实数据和预测数据的对比曲线
+train_maxtemp = train_data[:, [0]]
+plt.plot(train_time_cleaned, train_maxtemp, color='blue', label='40M Train MaxTemperature')
 
 # 对测试数据进行绘图
-test_temp = predict(x_test)
-# # 画出真实数据和预测数据的对比曲线
-# test_time = real_time[len(train_set) + time_step:]
-# plt.plot(test_time, test_temp, color='green', label='40M Test Temperature')
+test_data = predict(x_test)
+# 画出真实数据和预测数据的对比曲线
+test_maxtemp = test_data[:, [0]]
+plt.plot(test_time_cleaned, test_maxtemp, color='green', label='40M Test MaxTemperature')
 
 # 对未来进行预测
-predict_time = []
-predict_data = list(sc.transform(data))
-_time = time[-1]
-for i in range(n_predict):
-    # if _time.day == 30:
-    #     _time = datetime.date(_time.year + 1, 6, 1)
-    # else:
-    #     _time += datetime.timedelta(days=1)
-    _time += datetime.timedelta(days=1)
-    x_predict = torch.FloatTensor(predict_data[-time_step:]).view(-1, time_step, n_feature)
-    predict_data += list(predict(x_predict, False))
-    predict_time.append(_time)
-predict_temp = sc.inverse_transform(np.array(predict_data[-n_predict:]))
+# predict_time = []
+# predict_data = list(sc.transform(data))
+# _time = time[-1]
+# for i in range(n_predict):
+#     # if _time.day == 30:
+#     #     _time = datetime.date(_time.year + 1, 6, 1)
+#     # else:
+#     #     _time += datetime.timedelta(days=1)
+#     _time += datetime.timedelta(days=1)
+#     x_predict = torch.FloatTensor(predict_data[-time_step:]).view(-1, time_step, n_feature)
+#     predict_data += list(predict(x_predict, False))
+#     predict_time.append(_time)
+# predict_temp = sc.inverse_transform(np.array(predict_data[-n_predict:]))
 # plt.plot(predict_time, predict_temp, color='orange', label='40M Predict Temperature')
 #
 # plt.title('40M Temperature Training Consult')
-# plt.xlabel('Time')
-# plt.ylabel('Temperature')
-# plt.legend()
-# plt.show()
+plt.xlabel('Time')
+plt.ylabel('Temperature')
+plt.legend()
+plt.show()

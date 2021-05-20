@@ -1,1 +1,1 @@
-__all__ = ['LSTM&GRU']
+__all__ = ['RNN', 'EncoderDecoder']

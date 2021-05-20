@@ -1,9 +1,9 @@
 from torch import nn
 
 
-class GRU(nn.Module):
+class GRUSimple(nn.Module):
     def __init__(self, n_feature, n_hidden, n_class):
-        super(GRU, self).__init__()
+        super(GRUSimple, self).__init__()
         self.gru1 = nn.GRU(input_size=n_feature, hidden_size=n_hidden, num_layers=3, dropout=0.2, batch_first=True)
         self.linear1 = nn.Linear(in_features=n_hidden, out_features=n_feature)
         self.gru2 = nn.GRU(input_size=n_feature, hidden_size=n_hidden, num_layers=2, dropout=0.2, batch_first=True)
@@ -23,9 +23,9 @@ class GRU(nn.Module):
         return _x
 
 
-class LSTM(nn.Module):
+class LSTMSimple(nn.Module):
     def __init__(self, n_feature, n_hidden, n_class):
-        super(LSTM, self).__init__()
+        super(LSTMSimple, self).__init__()
         self.lstm1 = nn.LSTM(input_size=n_feature, hidden_size=n_hidden, num_layers=3, dropout=0.2, batch_first=True)
         self.linear1 = nn.Linear(in_features=n_hidden, out_features=n_feature)
         self.lstm2 = nn.LSTM(input_size=n_feature, hidden_size=n_hidden, num_layers=2, dropout=0.2, batch_first=True)

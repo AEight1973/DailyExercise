@@ -2,12 +2,12 @@ from torch import nn
 
 
 class GRU(nn.Module):
-    def __init__(self):
+    def __init__(self, n_feature, n_hidden, n_class):
         super(GRU, self).__init__()
-        self.gru1 = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=3, dropout=0.2, batch_first=True)
-        self.linear1 = nn.Linear(in_features=10, out_features=n_feature)
-        self.gru2 = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=2, dropout=0.2, batch_first=True)
-        self.linear2 = nn.Linear(in_features=10, out_features=n_class)
+        self.gru1 = nn.GRU(input_size=n_feature, hidden_size=n_hidden, num_layers=3, dropout=0.2, batch_first=True)
+        self.linear1 = nn.Linear(in_features=n_hidden, out_features=n_feature)
+        self.gru2 = nn.GRU(input_size=n_feature, hidden_size=n_hidden, num_layers=2, dropout=0.2, batch_first=True)
+        self.linear2 = nn.Linear(in_features=n_hidden, out_features=n_class)
 
     def forward(self, _x):
         _x, _ = self.gru1(_x)
@@ -24,12 +24,12 @@ class GRU(nn.Module):
 
 
 class LSTM(nn.Module):
-    def __init__(self):
+    def __init__(self, n_feature, n_hidden, n_class):
         super(LSTM, self).__init__()
-        self.lstm1 = nn.LSTM(input_size=n_feature, hidden_size=10, num_layers=3, dropout=0.2, batch_first=True)
-        self.linear1 = nn.Linear(in_features=10, out_features=n_feature)
-        self.lstm2 = nn.LSTM(input_size=n_feature, hidden_size=10, num_layers=2, dropout=0.2, batch_first=True)
-        self.linear2 = nn.Linear(in_features=10, out_features=n_class)
+        self.lstm1 = nn.LSTM(input_size=n_feature, hidden_size=n_hidden, num_layers=3, dropout=0.2, batch_first=True)
+        self.linear1 = nn.Linear(in_features=n_hidden, out_features=n_feature)
+        self.lstm2 = nn.LSTM(input_size=n_feature, hidden_size=n_hidden, num_layers=2, dropout=0.2, batch_first=True)
+        self.linear2 = nn.Linear(in_features=n_hidden, out_features=n_class)
 
     def forward(self, _x):
         _x, _ = self.lstm1(_x)

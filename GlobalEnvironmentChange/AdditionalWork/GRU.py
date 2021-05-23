@@ -11,7 +11,10 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
-# '''Dataset
+
+# '''
+# Original Dataset
+#
 # 数据集: 崇明历史气候记录.txt
 # 数据集包含： 崇明区近10年六月主要气象指标
 # I   具体指标：
@@ -95,7 +98,7 @@ from sklearn.preprocessing import LabelEncoder
 # dataset = pd.DataFrame(data, columns=features, index=time)
 
 '''
-Dataset
+New Dataset
 
 数据集: weatherdata_2011_2021.xlsx
 数据集包含： 崇明区近10年主要气象指标
@@ -185,25 +188,39 @@ model
 
 
 class GRU(nn.Module):
+    # def __init__(self):
+    #     super(GRU, self).__init__()
+    #     self.gru1 = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=3, batch_first=True)
+    #     self.linear1 = nn.Linear(in_features=10, out_features=n_feature)
+    #     self.gru2 = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=2, batch_first=True)
+    #     self.linear2 = nn.Linear(in_features=10, out_features=n_class)
+    #
+    # def forward(self, _x):
+    #     _x, _ = self.gru1(_x)
+    #     s, b, h = _x.shape
+    #     _x = _x.contiguous().view(s * b, h)  # 转换成线性层的输入格式
+    #     _x = self.linear1(_x)
+    #     _x = _x.view(s, b, -1)
+    #     _x, _ = self.gru2(_x)
+    #     s, b, h = _x.shape
+    #     _x = _x.contiguous().view(s * b, h)  # 转换成线性层的输入格式
+    #     _x = self.linear2(_x)
+    #     _x = _x.view(s, b, -1)
+    #     return _x
     def __init__(self):
         super(GRU, self).__init__()
-        self.gru1 = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=3, dropout=0.2, batch_first=True)
-        self.linear1 = nn.Linear(in_features=10, out_features=n_feature)
-        self.gru2 = nn.GRU(input_size=n_feature, hidden_size=10, num_layers=2, dropout=0.2, batch_first=True)
-        self.linear2 = nn.Linear(in_features=10, out_features=n_class)
+        self.lstm = nn.LSTM(n_feature, 10, 2, batch_first=True)
+        self.classifier = nn.Linear(10, n_class)
 
-    def forward(self, _x):
-        _x, _ = self.gru1(_x)
-        s, b, h = _x.shape
-        _x = _x.contiguous().view(s * b, h)  # 转换成线性层的输入格式
-        _x = self.linear1(_x)
-        _x = _x.view(s, b, -1)
-        _x, _ = self.gru2(_x)
-        s, b, h = _x.shape
-        _x = _x.contiguous().view(s * b, h)  # 转换成线性层的输入格式
-        _x = self.linear2(_x)
-        _x = _x.view(s, b, -1)
-        return _x
+    def forward(self, x):
+        # h0 = Variable(torch.zeros(self.n_layer, x.size(1),
+        #   self.hidden_dim)).cuda()
+        # c0 = Variable(torch.zeros(self.n_layer, x.size(1),
+        #   self.hidden_dim)).cuda()
+        out, _ = self.lstm(x)
+        out = out[:, -1, :]
+        out = self.classifier(out)
+        return out
 
 
 # class GRU(nn.Module):
